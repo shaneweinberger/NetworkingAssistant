@@ -1,0 +1,112 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width-expanded);
+  min-width: var(--sidebar-width-expanded);
+  height: 100%;
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  transition: width var(--sidebar-transition), min-width var(--sidebar-transition);
+  overflow: hidden;
+}
+
+.sidebar[data-collapsed='true'] {
+  width: var(--sidebar-width-collapsed);
+  min-width: var(--sidebar-width-collapsed);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-4);
+  height: 56px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar[data-collapsed='true'] .header {
+  justify-content: center;
+}
+
+.wordmark {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.toggleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.toggleButton:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.nav {
+  flex: 1;
+  padding: var(--spacing-3) var(--spacing-2);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.navItem:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.navItemActive {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.sidebar[data-collapsed='true'] .navItem {
+  justify-content: center;
+  padding: var(--spacing-2);
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.navLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
