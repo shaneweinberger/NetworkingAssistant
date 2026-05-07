@@ -28,7 +28,7 @@ const ListIcon = () => (
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', path: '/home', icon: <HomeIcon /> },
-  { label: 'List', path: '/list', icon: <ListIcon /> },
+  { label: 'Contacts', path: '/contacts', icon: <ListIcon /> },
 ]
 
 export default function Layout() {

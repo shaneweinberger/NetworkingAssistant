@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Company, Contact, CompanyWithContacts, ContactStatus } from '../types/database'
 import AddCompanyModal from '../components/AddCompanyModal'
 import AddContactModal from '../components/AddContactModal'
-import styles from './List.module.css'
+import styles from './Contacts.module.css'
 
 const statusClass: Record<ContactStatus, string> = {
   'Replied': styles.statusReplied,
@@ -16,7 +16,7 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function List() {
+export default function Contacts() {
   const [companies, setCompanies] = useState<CompanyWithContacts[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,11 +75,11 @@ export default function List() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>List</h1>
+          <h1 className={styles.title}>Contacts</h1>
           <p className={styles.subtitle}>Manage your contacts and connections.</p>
         </div>
         <button className={styles.addButton} type="button" onClick={() => setShowCompanyModal(true)}>
-          Add entry
+          Add Company
         </button>
       </header>
 
