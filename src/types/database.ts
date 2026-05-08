@@ -1,5 +1,3 @@
-export type ContactStatus = 'Sent' | 'Replied' | 'No reply'
-
 export interface Company {
   id: string
   name: string
@@ -14,7 +12,10 @@ export interface Contact {
   role: string | null
   email: string | null
   last_contact: string | null
-  status: ContactStatus
+  status: string
+  location: string | null
+  education: string | null
+  linkedin: string | null
   notes: string | null
   created_at: string
 }

@@ -1,0 +1,310 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  width: 540px;
+  max-width: calc(100vw - var(--spacing-8));
+  max-height: calc(100vh - var(--spacing-12));
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-5) var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 0 var(--spacing-1);
+  border-radius: var(--radius-sm);
+  transition: color 100ms ease, background-color 100ms ease;
+}
+
+.closeButton:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-hover);
+}
+
+.list {
+  overflow-y: auto;
+  padding: var(--spacing-3) var(--spacing-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  transition: background-color 100ms ease;
+}
+
+.row:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.visibility input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+.labelInput {
+  flex: 1;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 6px var(--spacing-2);
+  outline: none;
+  transition: border-color 100ms ease, background-color 100ms ease;
+}
+
+.labelInput:hover {
+  border-color: var(--color-border);
+}
+
+.labelInput:focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg);
+}
+
+.typeSelect {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--spacing-2);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 100ms ease;
+}
+
+.typeSelect:focus {
+  border-color: var(--color-accent);
+}
+
+.typeSelect:disabled {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+}
+
+/* Options */
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 28px;
+  padding-top: var(--spacing-1);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.optionInput {
+  flex: 1;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px var(--spacing-2);
+  outline: none;
+  min-width: 0;
+}
+
+.optionInput:focus {
+  border-color: var(--color-accent);
+}
+
+.optionPreview {
+  display: inline-block;
+  padding: 2px var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.optionRemove {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 100ms ease, background-color 100ms ease;
+}
+
+.optionRemove:hover {
+  color: #c0392b;
+  background-color: var(--color-bg-hover);
+}
+
+.addOption {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 2px;
+  font-family: inherit;
+  transition: color 100ms ease;
+}
+
+.addOption:hover {
+  color: var(--color-text-primary);
+}
+
+/* Color picker */
+
+.colorSwatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: transform 100ms ease;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.1);
+}
+
+.colorMenu {
+  position: fixed;
+  z-index: 200;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.colorOption {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.colorOption:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.colorOptionActive {
+  background-color: var(--color-bg-subtle);
+}
+
+.colorOptionSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.colorOptionName {
+  text-transform: capitalize;
+}
+
+/* Footer */
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--spacing-4) var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.doneButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-bg);
+  background-color: var(--color-accent);
+  padding: var(--spacing-2) var(--spacing-5);
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 120ms ease;
+}
+
+.doneButton:hover {
+  opacity: 0.85;
+}

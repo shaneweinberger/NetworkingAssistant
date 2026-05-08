@@ -27,6 +27,12 @@
   color: var(--color-text-secondary);
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
 .addButton {
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -40,6 +46,25 @@
 
 .addButton:hover {
   opacity: 0.82;
+}
+
+.secondaryButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.secondaryButton:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
 }
 
 /* Company accordion list */
@@ -64,6 +89,7 @@
   padding: var(--spacing-4) var(--spacing-5);
   background-color: var(--color-bg);
   text-align: left;
+  cursor: pointer;
   transition: background-color 120ms ease;
 }
 
@@ -98,105 +124,33 @@
   transform: rotate(180deg);
 }
 
-/* Expanded contacts table */
+.companyDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  padding: var(--spacing-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.companyHeader:hover .companyDeleteBtn {
+  opacity: 1;
+}
+
+.companyDeleteBtn:hover {
+  color: #c0392b;
+}
 
 .contactsWrapper {
   border-top: 1px solid var(--color-border);
 }
 
-.contactsTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
-}
-
-.contactsTable thead {
-  background-color: var(--color-bg-subtle);
-}
-
-.contactsTable th {
-  padding: var(--spacing-2) var(--spacing-5);
-  text-align: left;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-tertiary);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.contactsTable td {
-  padding: var(--spacing-3) var(--spacing-5);
-  color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: middle;
-}
-
-.contactsTable tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.contactsTable tbody tr:hover td {
-  background-color: var(--color-bg-subtle);
-}
-
-.contactName {
-  font-weight: 500;
-}
-
-.contactMuted {
-  color: var(--color-text-secondary);
-}
-
-/* Status badges */
-
-.statusBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px var(--spacing-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-}
-
-.statusReplied {
-  background-color: #e6f4ea;
-  color: #1e7e34;
-}
-
-.statusSent {
-  background-color: #f0f0f0;
-  color: var(--color-text-secondary);
-}
-
-.statusNoReply {
-  background-color: #fff3e0;
-  color: #b45309;
-}
-
 .stateText {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
-}
-
-.emptyContacts {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  padding: var(--spacing-4) var(--spacing-5);
-}
-
-.contactsFooter {
-  padding: var(--spacing-3) var(--spacing-5);
-  border-top: 1px solid var(--color-border);
-}
-
-.addContactButton {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  transition: color 120ms ease;
-}
-
-.addContactButton:hover {
-  color: var(--color-text-primary);
 }

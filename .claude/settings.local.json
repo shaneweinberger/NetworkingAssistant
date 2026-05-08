@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm create *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(mkdir -p /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/Table /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/ContactsTable)"
+    ],
+    "additionalDirectories": [
+      "/Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components"
     ]
   }
 }
