@@ -1,3 +1,4 @@
+import TodoList from '../components/TodoList/TodoList'
 import styles from './Home.module.css'
 
 export default function Home() {
@@ -21,6 +22,10 @@ export default function Home() {
           <p className={styles.cardLabel}>Follow-ups due</p>
           <p className={styles.cardValue}>—</p>
         </div>
+      </div>
+
+      <div className={styles.todoSection}>
+        <TodoList />
       </div>
     </div>
   )

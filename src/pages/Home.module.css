@@ -53,3 +53,7 @@
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
 }
+
+.todoSection {
+  margin-top: var(--spacing-10);
+}

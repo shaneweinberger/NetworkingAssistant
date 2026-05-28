@@ -1,0 +1,206 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-1);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.sectionMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.stateText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.errorText {
+  font-size: var(--font-size-sm);
+  color: #c0392b;
+  background-color: rgba(192, 57, 43, 0.06);
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-sm);
+}
+
+.errorText code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background-color: rgba(192, 57, 43, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 2px 0;
+  border-radius: var(--radius-sm);
+  transition: background-color 100ms ease, opacity 100ms ease;
+}
+
+.row:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+.rowDragging {
+  opacity: 0.4;
+}
+
+.rowDropAbove::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--color-accent);
+  border-radius: 1px;
+}
+
+.rowDropBelow::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--color-accent);
+  border-radius: 1px;
+}
+
+.grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 100ms ease;
+  flex-shrink: 0;
+}
+
+.grip:active {
+  cursor: grabbing;
+}
+
+.row:hover .grip {
+  opacity: 1;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background-color: var(--color-bg);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 3px;
+  color: var(--color-bg);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+  flex-shrink: 0;
+}
+
+.checkbox:hover {
+  border-color: var(--color-accent);
+}
+
+.checkboxChecked {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px var(--spacing-2);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.rowDone .input {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 100ms ease, color 100ms ease, background-color 100ms ease;
+  flex-shrink: 0;
+}
+
+.row:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: #c0392b;
+  background-color: var(--color-bg-hover);
+}
+
+.addBtn {
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px var(--spacing-2);
+  margin-left: 22px; /* align with input text after grip */
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  transition: color 100ms ease, background-color 100ms ease;
+}
+
+.addBtn:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-hover);
+}

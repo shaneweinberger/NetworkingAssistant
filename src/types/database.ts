@@ -25,3 +25,11 @@ export interface Contact {
 export interface CompanyWithContacts extends Company {
   contacts: Contact[]
 }
+
+export interface Todo {
+  id: string
+  content: string
+  done: boolean
+  position: number
+  created_at: string
+}
