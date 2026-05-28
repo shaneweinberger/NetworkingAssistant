@@ -5,9 +5,16 @@
 }
 
 .table {
+  width: 100%;
   border-collapse: collapse;
   font-size: var(--font-size-sm);
   table-layout: fixed;
+}
+
+.spacerTh {
+  padding: 0;
+  background-color: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .th {
@@ -161,8 +168,12 @@
 }
 
 .trailingTh {
+  position: sticky;
+  right: 0;
+  z-index: 2;
   background-color: var(--color-bg-subtle);
   border-bottom: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
   padding: 0;
 }
 

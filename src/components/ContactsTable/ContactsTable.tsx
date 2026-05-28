@@ -75,7 +75,7 @@ export default function ContactsTable({
         <tbody>
           {contacts.length === 0 && (
             <tr>
-              <td colSpan={visibleColumns.length + 1} className={styles.emptyRow}>
+              <td colSpan={visibleColumns.length + 2} className={styles.emptyRow}>
                 No contacts
               </td>
             </tr>
@@ -87,6 +87,7 @@ export default function ContactsTable({
                   {renderCell(col, contact, onUpdate, contact.id === newContactId && col.key === 'name')}
                 </td>
               ))}
+              <td className={styles.spacerCell} aria-hidden />
               <td className={styles.actionCell}>
                 <button
                   type="button"

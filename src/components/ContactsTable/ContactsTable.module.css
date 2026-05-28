@@ -16,21 +16,39 @@
   white-space: nowrap;
 }
 
+.spacerCell {
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .row:hover .cell,
+.row:hover .spacerCell,
 .row:hover .actionCell {
   background-color: var(--color-bg-subtle);
 }
 
 .row:last-child .cell,
+.row:last-child .spacerCell,
 .row:last-child .actionCell {
   border-bottom: none;
 }
 
 .actionCell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  width: 36px;
   padding: 0;
+  background-color: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
   text-align: center;
   vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.row:hover .actionCell {
+  background-color: var(--color-bg-subtle);
 }
 
 .deleteBtn {

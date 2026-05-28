@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Company, Contact, CompanyWithContacts } from '../types/database'
 import AddCompanyModal from '../components/AddCompanyModal'
 import DeleteContactModal from '../components/DeleteContactModal'
 import DeleteCompanyModal from '../components/DeleteCompanyModal/DeleteCompanyModal'
 import ColumnSettingsModal from '../components/ColumnSettingsModal/ColumnSettingsModal'
+import CategoryTabs, { type CategoryFilter } from '../components/CategoryTabs/CategoryTabs'
+import CategoryPicker from '../components/CategoryPicker/CategoryPicker'
 import ContactsTable, {
   DEFAULT_CONTACT_COLUMNS,
   type ContactColKey,
@@ -12,6 +14,59 @@ import ContactsTable, {
 } from '../components/ContactsTable/ContactsTable'
 import type { SortState } from '../components/Table/Table'
 import styles from './Contacts.module.css'
+
+const COMPANY_ORDER_STORAGE_KEY = 'contacts:company-order'
+const CATEGORY_FILTER_STORAGE_KEY = 'contacts:category-filter'
+
+function loadCategoryFilter(): CategoryFilter {
+  try {
+    const raw = localStorage.getItem(CATEGORY_FILTER_STORAGE_KEY)
+    if (!raw) return { type: 'all' }
+    const parsed = JSON.parse(raw) as CategoryFilter
+    if (parsed?.type === 'all' || parsed?.type === 'starred') return parsed
+    if (parsed?.type === 'category' && typeof parsed.name === 'string') return parsed
+    return { type: 'all' }
+  } catch {
+    return { type: 'all' }
+  }
+}
+
+function saveCategoryFilter(filter: CategoryFilter) {
+  try {
+    localStorage.setItem(CATEGORY_FILTER_STORAGE_KEY, JSON.stringify(filter))
+  } catch {
+    // ignore
+  }
+}
+
+function loadCompanyOrder(): string[] {
+  try {
+    const stored = localStorage.getItem(COMPANY_ORDER_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function saveCompanyOrder(ids: string[]) {
+  try {
+    localStorage.setItem(COMPANY_ORDER_STORAGE_KEY, JSON.stringify(ids))
+  } catch {
+    // ignore quota / unavailable storage
+  }
+}
+
+function applySavedOrder<T extends { id: string; name: string }>(items: T[]): T[] {
+  const order = loadCompanyOrder()
+  if (order.length === 0) return items
+  const orderMap = new Map(order.map((id, i) => [id, i]))
+  return [...items].sort((a, b) => {
+    const aIdx = orderMap.get(a.id) ?? Infinity
+    const bIdx = orderMap.get(b.id) ?? Infinity
+    if (aIdx !== bIdx) return aIdx - bIdx
+    return a.name.localeCompare(b.name)
+  })
+}
 
 type ColumnConfigRow = {
   column_key: ContactColKey
@@ -68,6 +123,17 @@ export default function Contacts() {
   const [deleteCompanyTarget, setDeleteCompanyTarget] = useState<Company | null>(null)
   const [newContactId, setNewContactId] = useState<string | null>(null)
 
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(loadCategoryFilter)
+  const [categoryPickerFor, setCategoryPickerFor] = useState<
+    { companyId: string; anchor: HTMLElement } | null
+  >(null)
+
+  const [companyDrag, setCompanyDrag] = useState<{ from: number; dropIndex: number } | null>(null)
+  const companyDragRef = useRef(companyDrag)
+  companyDragRef.current = companyDrag
+  const justDraggedCompanyRef = useRef(false)
+  const companyListRef = useRef<HTMLDivElement>(null)
+
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -75,7 +141,7 @@ export default function Contacts() {
       const [{ data: cData, error: cErr }, configResult] = await Promise.all([
         supabase
           .from('companies')
-          .select(`id, name, website, created_at,
+          .select(`id, name, website, category, starred, created_at,
             contacts ( id, name, role, email, last_contact, status, location, education, linkedin, notes, created_at, company_id )`)
           .order('name'),
         supabase
@@ -85,7 +151,7 @@ export default function Contacts() {
       ])
 
       if (cErr) setError(cErr.message)
-      else setCompanies(cData as CompanyWithContacts[])
+      else setCompanies(applySavedOrder(cData as CompanyWithContacts[]))
 
       // Load column configs (gracefully fall back if table missing or empty)
       if (configResult.error) {
@@ -130,10 +196,118 @@ export default function Contacts() {
     return next
   })
 
+  const handleHeaderClick = (id: string) => {
+    if (justDraggedCompanyRef.current) {
+      justDraggedCompanyRef.current = false
+      return
+    }
+    toggle(id)
+  }
+
+  const startCompanyDrag = (e: React.MouseEvent, fromIndex: number) => {
+    const target = e.target as HTMLElement
+    if (target.closest('button')) return
+
+    justDraggedCompanyRef.current = false
+    const startY = e.clientY
+    let dragging = false
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!dragging && Math.abs(ev.clientY - startY) < 5) return
+      if (!dragging) {
+        dragging = true
+        document.body.style.cursor = 'grabbing'
+        document.body.style.userSelect = 'none'
+      }
+
+      const listEl = companyListRef.current
+      if (!listEl) return
+
+      const children = Array.from(listEl.children) as HTMLElement[]
+      let dropIndex = children.length
+      for (let i = 0; i < children.length; i++) {
+        const rect = children[i].getBoundingClientRect()
+        if (ev.clientY < rect.top + rect.height / 2) {
+          dropIndex = i
+          break
+        }
+      }
+
+      setCompanyDrag({ from: fromIndex, dropIndex })
+    }
+
+    const onMouseUp = () => {
+      if (dragging) justDraggedCompanyRef.current = true
+      const ds = companyDragRef.current
+      if (ds && ds.dropIndex !== ds.from && ds.dropIndex !== ds.from + 1) {
+        setCompanies(prev => {
+          const next = [...prev]
+          const [moved] = next.splice(ds.from, 1)
+          next.splice(ds.dropIndex > ds.from ? ds.dropIndex - 1 : ds.dropIndex, 0, moved)
+          saveCompanyOrder(next.map(c => c.id))
+          return next
+        })
+      }
+      setCompanyDrag(null)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
+
   const handleCompanyAdded = (company: Company) => {
-    setCompanies(prev => [...prev, { ...company, contacts: [] }].sort((a, b) => a.name.localeCompare(b.name)))
+    setCompanies(prev => {
+      const next = [...prev, { ...company, contacts: [] }]
+      saveCompanyOrder(next.map(c => c.id))
+      return next
+    })
     setShowCompanyModal(false)
   }
+
+  const updateCompany = async (
+    id: string,
+    patch: Partial<Pick<Company, 'category' | 'starred'>>,
+  ) => {
+    setCompanies(prev => prev.map(c => (c.id === id ? { ...c, ...patch } : c)))
+    const { error } = await supabase.from('companies').update(patch).eq('id', id)
+    if (error) console.warn('Failed to update company:', error.message)
+  }
+
+  const changeCategoryFilter = (filter: CategoryFilter) => {
+    setCategoryFilter(filter)
+    saveCategoryFilter(filter)
+  }
+
+  const allCategories = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of companies) {
+      if (c.category && c.category.trim()) set.add(c.category)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [companies])
+
+  const counts = useMemo(() => {
+    const byCategory: Record<string, number> = {}
+    let starred = 0
+    for (const c of companies) {
+      if (c.starred) starred++
+      if (c.category) byCategory[c.category] = (byCategory[c.category] ?? 0) + 1
+    }
+    return { all: companies.length, starred, byCategory }
+  }, [companies])
+
+  const filteredCompanies = useMemo(() => {
+    if (categoryFilter.type === 'all') return companies
+    if (categoryFilter.type === 'starred') return companies.filter(c => c.starred)
+    return companies.filter(c => c.category === categoryFilter.name)
+  }, [companies, categoryFilter])
+
+  const newCompanyDefaultCategory =
+    categoryFilter.type === 'category' ? categoryFilter.name : null
 
   const updateContact = async (id: string, field: keyof Contact, value: string | null) => {
     setCompanies(prev => prev.map(c => ({
@@ -183,7 +357,11 @@ export default function Contacts() {
     await supabase.from('contacts').delete().eq('company_id', deleteCompanyTarget.id)
     const { error } = await supabase.from('companies').delete().eq('id', deleteCompanyTarget.id)
     if (!error) {
-      setCompanies(prev => prev.filter(c => c.id !== deleteCompanyTarget.id))
+      setCompanies(prev => {
+        const next = prev.filter(c => c.id !== deleteCompanyTarget.id)
+        saveCompanyOrder(next.map(c => c.id))
+        return next
+      })
       setExpanded(prev => {
         const next = new Set(prev)
         next.delete(deleteCompanyTarget.id)
@@ -244,23 +422,88 @@ export default function Contacts() {
       {error && <p className={styles.stateText}>Error: {error}</p>}
 
       {!loading && !error && (
-        <div className={styles.companyList}>
-          {companies.length === 0 && (
-            <p className={styles.stateText}>No companies yet. Add one to get started.</p>
-          )}
+        <>
+          <CategoryTabs
+            categories={allCategories}
+            counts={counts}
+            value={categoryFilter}
+            onChange={changeCategoryFilter}
+          />
+          <div className={styles.companyList} ref={companyListRef}>
+            {companies.length === 0 && (
+              <p className={styles.stateText}>No companies yet. Add one to get started.</p>
+            )}
+            {companies.length > 0 && filteredCompanies.length === 0 && (
+              <p className={styles.stateText}>
+                {categoryFilter.type === 'starred'
+                  ? 'No starred companies yet. Star a company to see it here.'
+                  : categoryFilter.type === 'category'
+                    ? `No companies in “${categoryFilter.name}” yet.`
+                    : 'No companies match.'}
+              </p>
+            )}
 
-          {companies.map(group => {
+            {filteredCompanies.map(group => {
+              const index = companies.findIndex(c => c.id === group.id)
             const isOpen = expanded.has(group.id)
+            const ds = companyDrag
+            const isDragging = ds?.from === index
+            const isDropAbove =
+              ds !== null && ds.dropIndex === index && ds.from !== index && ds.from !== index - 1
+            const isDropBelow =
+              ds !== null && ds.dropIndex === companies.length && index === companies.length - 1 && ds.from !== index
             return (
-              <div key={group.id} className={styles.companyGroup}>
+              <div
+                key={group.id}
+                className={[
+                  styles.companyGroup,
+                  isDragging ? styles.companyGroupDragging : '',
+                  isDropAbove ? styles.companyGroupDropAbove : '',
+                  isDropBelow ? styles.companyGroupDropBelow : '',
+                ].filter(Boolean).join(' ')}
+              >
                 <div
                   className={styles.companyHeader}
-                  onClick={() => toggle(group.id)}
+                  onClick={() => handleHeaderClick(group.id)}
+                  onMouseDown={e => startCompanyDrag(e, index)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggle(group.id) }}
                 >
-                  <span className={styles.companyName}>{group.name}</span>
+                  <div className={styles.companyHeaderLeft}>
+                    <button
+                      type="button"
+                      className={`${styles.starBtn} ${group.starred ? styles.starBtnActive : ''}`}
+                      aria-label={group.starred ? `Unstar ${group.name}` : `Star ${group.name}`}
+                      aria-pressed={group.starred}
+                      onClick={e => {
+                        e.stopPropagation()
+                        updateCompany(group.id, { starred: !group.starred })
+                      }}
+                      onMouseDown={e => e.stopPropagation()}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill={group.starred ? 'currentColor' : 'none'}>
+                        <path
+                          d="M8 1.5l1.96 4.36 4.79.45-3.6 3.2 1.05 4.69L8 11.79l-4.2 2.41 1.05-4.69-3.6-3.2 4.79-.45L8 1.5z"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <span className={styles.companyName}>{group.name}</span>
+                    <button
+                      type="button"
+                      className={`${styles.categoryBadge} ${group.category ? '' : styles.categoryBadgeEmpty}`}
+                      onClick={e => {
+                        e.stopPropagation()
+                        setCategoryPickerFor({ companyId: group.id, anchor: e.currentTarget })
+                      }}
+                      onMouseDown={e => e.stopPropagation()}
+                    >
+                      {group.category ?? '+ Category'}
+                    </button>
+                  </div>
                   <div className={styles.companyMeta}>
                     <span className={styles.contactCount}>
                       {group.contacts.length} {group.contacts.length === 1 ? 'contact' : 'contacts'}
@@ -319,12 +562,30 @@ export default function Contacts() {
               </div>
             )
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {showCompanyModal && (
-        <AddCompanyModal onClose={() => setShowCompanyModal(false)} onAdded={handleCompanyAdded} />
+        <AddCompanyModal
+          defaultCategory={newCompanyDefaultCategory}
+          onClose={() => setShowCompanyModal(false)}
+          onAdded={handleCompanyAdded}
+        />
       )}
+      {categoryPickerFor && (() => {
+        const company = companies.find(c => c.id === categoryPickerFor.companyId)
+        if (!company) return null
+        return (
+          <CategoryPicker
+            current={company.category}
+            allCategories={allCategories}
+            anchor={categoryPickerFor.anchor}
+            onSelect={value => updateCompany(company.id, { category: value })}
+            onClose={() => setCategoryPickerFor(null)}
+          />
+        )
+      })()}
       {showColumnSettings && (
         <ColumnSettingsModal
           columns={columns}

@@ -2,6 +2,8 @@ export interface Company {
   id: string
   name: string
   website: string | null
+  category: string | null
+  starred: boolean
   created_at: string
 }
 

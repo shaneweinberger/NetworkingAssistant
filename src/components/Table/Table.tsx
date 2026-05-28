@@ -139,7 +139,7 @@ export default function Table<K extends string>({
 
   return (
     <div className={styles.container} ref={containerRef}>
-      <table ref={tableRef} className={styles.table} style={{ width: totalWidth }}>
+      <table ref={tableRef} className={styles.table} style={{ minWidth: totalWidth }}>
         <thead>
           <tr>
             {columns.map((col, i) => {
@@ -221,6 +221,7 @@ export default function Table<K extends string>({
                 </th>
               )
             })}
+            <th className={styles.spacerTh} aria-hidden />
             {trailingWidth > 0 && <th style={{ width: trailingWidth }} className={styles.trailingTh} />}
           </tr>
         </thead>

@@ -3,10 +3,14 @@
     "allow": [
       "Bash(npm create *)",
       "Bash(npm run *)",
-      "Bash(mkdir -p /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/Table /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/ContactsTable)"
+      "Bash(mkdir -p /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/Table /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/ContactsTable)",
+      "Bash(npx tsc *)",
+      "Bash(mkdir -p /Users/weinbergershane/Documents/Programming/NetworkingAssistant/migrations)",
+      "Bash(echo \"---exit:$?\")"
     ],
     "additionalDirectories": [
-      "/Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components"
+      "/Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components",
+      "/Users/weinbergershane/Documents/Programming/NetworkingAssistant"
     ]
   }
 }

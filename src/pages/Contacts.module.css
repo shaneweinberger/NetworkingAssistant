@@ -79,6 +79,19 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  transition: opacity 100ms ease;
+}
+
+.companyGroupDragging {
+  opacity: 0.4;
+}
+
+.companyGroupDropAbove {
+  box-shadow: 0 -3px 0 0 var(--color-accent);
+}
+
+.companyGroupDropBelow {
+  box-shadow: 0 3px 0 0 var(--color-accent);
 }
 
 .companyHeader {
@@ -97,10 +110,78 @@
   background-color: var(--color-bg-hover);
 }
 
+.companyHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 0;
+  flex: 1;
+}
+
 .companyName {
   font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-text-primary);
+}
+
+.starBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: var(--spacing-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  transition: color 120ms ease, background-color 120ms ease;
+  flex-shrink: 0;
+}
+
+.starBtn:hover {
+  background-color: var(--color-bg-hover);
+  color: #d4a017;
+}
+
+.starBtnActive {
+  color: #f5b400;
+}
+
+.starBtnActive:hover {
+  color: #f5b400;
+}
+
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--spacing-2);
+  border-radius: 999px;
+  background-color: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.categoryBadge:hover {
+  background-color: var(--color-bg);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.categoryBadgeEmpty {
+  background-color: transparent;
+  color: var(--color-text-tertiary);
+  border-style: dashed;
+  opacity: 0;
+}
+
+.companyHeader:hover .categoryBadgeEmpty {
+  opacity: 1;
 }
 
 .companyMeta {

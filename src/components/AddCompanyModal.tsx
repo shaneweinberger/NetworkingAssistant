@@ -6,9 +6,10 @@ import styles from './AddCompanyModal.module.css'
 interface Props {
   onClose: () => void
   onAdded: (company: Company) => void
+  defaultCategory?: string | null
 }
 
-export default function AddCompanyModal({ onClose, onAdded }: Props) {
+export default function AddCompanyModal({ onClose, onAdded, defaultCategory = null }: Props) {
   const [name, setName] = useState('')
   const [website, setWebsite] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,7 +29,11 @@ export default function AddCompanyModal({ onClose, onAdded }: Props) {
 
     const { data, error } = await supabase
       .from('companies')
-      .insert({ name: name.trim(), website: website.trim() || null })
+      .insert({
+        name: name.trim(),
+        website: website.trim() || null,
+        category: defaultCategory,
+      })
       .select()
       .single()
 
