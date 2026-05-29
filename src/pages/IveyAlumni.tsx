@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { IveyAlumnus } from '../types/database'
+import type { Company, Contact, IveyAlumnus } from '../types/database'
 import styles from './IveyAlumni.module.css'
 
 type SortKey =
@@ -25,6 +25,10 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'location', label: 'Location' },
   { key: 'job_date_range', label: 'Tenure' },
 ]
+
+function normalizeCompanyName(name: string): string {
+  return name.trim().toLowerCase()
+}
 
 const PAGE_SIZES = [25, 50, 100]
 const ALL = '__all__'
@@ -95,18 +99,99 @@ export default function IveyAlumni() {
   const [pageSize, setPageSize] = useState(50)
   const [page, setPage] = useState(0)
 
+  // linkedin_urls of alumni that already exist as contacts (used to render
+  // the star filled and prevent duplicate adds).
+  const [addedLinkedinUrls, setAddedLinkedinUrls] = useState<Set<string>>(new Set())
+  const [addingId, setAddingId] = useState<string | null>(null)
+  const [addError, setAddError] = useState<string | null>(null)
+
   useEffect(() => {
-    async function fetchAlumni() {
-      const { data, error } = await supabase
-        .from('ivey_alumni')
-        .select('*')
-        .order('full_name')
-      if (error) setError(error.message)
-      else setRows((data as IveyAlumnus[]) ?? [])
+    async function fetchAll() {
+      const [alumniRes, contactsRes] = await Promise.all([
+        supabase.from('ivey_alumni').select('*').order('full_name'),
+        supabase.from('contacts').select('linkedin').not('linkedin', 'is', null),
+      ])
+      if (alumniRes.error) setError(alumniRes.error.message)
+      else setRows((alumniRes.data as IveyAlumnus[]) ?? [])
+
+      if (!contactsRes.error && contactsRes.data) {
+        const urls = new Set<string>()
+        for (const c of contactsRes.data as { linkedin: string | null }[]) {
+          if (c.linkedin) urls.add(c.linkedin)
+        }
+        setAddedLinkedinUrls(urls)
+      }
       setLoading(false)
     }
-    fetchAlumni()
+    fetchAll()
   }, [])
+
+  const addToContacts = async (alumnus: IveyAlumnus) => {
+    if (!alumnus.company || !alumnus.company.trim()) return
+    if (addedLinkedinUrls.has(alumnus.linkedin_url)) return
+    setAddingId(alumnus.id)
+    setAddError(null)
+
+    // Find an existing company by case-insensitive name. We pull just the
+    // candidates rather than fetching every company, then dedupe locally to
+    // handle whitespace/case differences (`Stripe ` vs `stripe`).
+    const target = normalizeCompanyName(alumnus.company)
+    const { data: candidates, error: companyFetchErr } = await supabase
+      .from('companies')
+      .select('id, name')
+      .ilike('name', alumnus.company.trim())
+
+    if (companyFetchErr) {
+      setAddError(`Could not check companies: ${companyFetchErr.message}`)
+      setAddingId(null)
+      return
+    }
+
+    let companyId: string | null = null
+    const match = (candidates as Pick<Company, 'id' | 'name'>[] | null)?.find(
+      c => normalizeCompanyName(c.name) === target,
+    )
+    if (match) {
+      companyId = match.id
+    } else {
+      const { data: newCompany, error: insertCompanyErr } = await supabase
+        .from('companies')
+        .insert({ name: alumnus.company.trim(), website: null, category: null })
+        .select('id')
+        .single()
+      if (insertCompanyErr || !newCompany) {
+        setAddError(`Could not create company: ${insertCompanyErr?.message ?? 'unknown'}`)
+        setAddingId(null)
+        return
+      }
+      companyId = newCompany.id
+    }
+
+    const { error: insertContactErr } = await supabase.from('contacts').insert({
+      company_id: companyId,
+      name: alumnus.full_name,
+      role: alumnus.job_title,
+      email: null,
+      status: 'Sent',
+      location: alumnus.location,
+      education: 'Ivey',
+      linkedin: alumnus.linkedin_url,
+      last_contact: null,
+    } satisfies Omit<Contact, 'id' | 'created_at' | 'notes'> & { notes?: string | null })
+
+    if (insertContactErr) {
+      setAddError(`Could not add contact: ${insertContactErr.message}`)
+      setAddingId(null)
+      return
+    }
+
+    setAddedLinkedinUrls(prev => {
+      const next = new Set(prev)
+      next.add(alumnus.linkedin_url)
+      return next
+    })
+    setAddingId(null)
+  }
 
   const industries = useMemo(() => {
     const set = new Set<string>()
@@ -237,10 +322,13 @@ export default function IveyAlumni() {
             </span>
           </div>
 
+          {addError && <p className={styles.stateText}>{addError}</p>}
+
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
+                  <th className={styles.th} aria-label="Add to contacts" />
                   {COLUMNS.map(col => {
                     const isSorted = sort?.key === col.key
                     return (
@@ -265,13 +353,48 @@ export default function IveyAlumni() {
               <tbody>
                 {visible.length === 0 && (
                   <tr>
-                    <td colSpan={COLUMNS.length} className={styles.emptyRow}>
+                    <td colSpan={COLUMNS.length + 1} className={styles.emptyRow}>
                       No matching alumni.
                     </td>
                   </tr>
                 )}
-                {visible.map(r => (
+                {visible.map(r => {
+                  const isAdded = addedLinkedinUrls.has(r.linkedin_url)
+                  const isAdding = addingId === r.id
+                  const canAdd = !!(r.company && r.company.trim()) && !isAdded && !isAdding
+                  return (
                   <tr key={r.id} className={styles.row}>
+                    <td className={`${styles.td} ${styles.starCell}`}>
+                      <button
+                        type="button"
+                        className={`${styles.starBtn} ${isAdded ? styles.starBtnActive : ''}`}
+                        onClick={() => canAdd && addToContacts(r)}
+                        disabled={!canAdd && !isAdded}
+                        aria-label={
+                          isAdded
+                            ? `${r.full_name} already in contacts`
+                            : !r.company
+                              ? 'No company set'
+                              : `Add ${r.full_name} to contacts`
+                        }
+                        title={
+                          isAdded
+                            ? 'Already in contacts'
+                            : !r.company
+                              ? 'No company set'
+                              : `Add to ${r.company}`
+                        }
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill={isAdded ? 'currentColor' : 'none'}>
+                          <path
+                            d="M8 1.5l1.96 4.36 4.79.45-3.6 3.2 1.05 4.69L8 11.79l-4.2 2.41 1.05-4.69-3.6-3.2 4.79-.45L8 1.5z"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </td>
                     <td className={styles.td}>
                       <a
                         href={r.linkedin_url}
@@ -304,7 +427,8 @@ export default function IveyAlumni() {
                       {r.job_date_range || <span className={styles.muted}>—</span>}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
