@@ -235,9 +235,17 @@ export default function Contacts() {
   }, [])
 
   const persistColumns = async (cols: ContactColumnConfig[]) => {
-    const rows = cols.map((c, i) => configToRow(c, i))
-    const { error } = await supabase.from('contact_column_configs').upsert(rows, { onConflict: 'column_key' })
-    if (error) console.warn('Failed to save column configs:', error.message)
+    const results = await Promise.all(
+      cols.map((c, i) =>
+        supabase
+          .from('contact_column_configs')
+          .update(configToRow(c, i))
+          .eq('column_key', c.key),
+      ),
+    )
+    for (const { error } of results) {
+      if (error) console.warn('Failed to save column config:', error.message)
+    }
   }
 
   // Used by Table for resize/reorder — debounced because resize fires per-pixel.
