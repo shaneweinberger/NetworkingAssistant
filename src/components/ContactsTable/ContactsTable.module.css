@@ -37,7 +37,7 @@
   position: sticky;
   right: 0;
   z-index: 1;
-  width: 36px;
+  width: 72px;
   padding: 0;
   background-color: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
@@ -47,10 +47,18 @@
   flex-shrink: 0;
 }
 
+.actionCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
 .row:hover .actionCell {
   background-color: var(--color-bg-subtle);
 }
 
+.sendBtn,
 .deleteBtn {
   display: inline-flex;
   align-items: center;
@@ -60,17 +68,41 @@
   border: none;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 100ms ease, color 100ms ease;
+  transition: opacity 100ms ease, color 100ms ease, background-color 100ms ease;
   padding: var(--spacing-1);
   border-radius: var(--radius-sm);
 }
 
+.row:hover .sendBtn,
 .row:hover .deleteBtn {
   opacity: 1;
 }
 
+.sendBtn:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-hover);
+}
+
 .deleteBtn:hover {
   color: #c0392b;
+}
+
+.derivedStatusCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px var(--spacing-3);
+  align-items: flex-start;
+}
+
+.statusWithActionCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.statusWithActionAction {
+  padding: 0 var(--spacing-3) 6px;
 }
 
 .cellInput {

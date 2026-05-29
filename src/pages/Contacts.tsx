@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Company, Contact, CompanyWithContacts } from '../types/database'
+import type { Company, Contact, CompanyWithContacts, EmailThread } from '../types/database'
 import AddCompanyModal from '../components/AddCompanyModal'
 import DeleteContactModal from '../components/DeleteContactModal'
 import DeleteCompanyModal from '../components/DeleteCompanyModal/DeleteCompanyModal'
@@ -12,8 +12,12 @@ import ContactsTable, {
   type ContactColKey,
   type ContactColumnConfig,
 } from '../components/ContactsTable/ContactsTable'
+import SendEmailModal from '../components/SendEmailModal/SendEmailModal'
 import type { SortState } from '../components/Table/Table'
+import { syncGmail } from '../lib/gmail/sync'
 import styles from './Contacts.module.css'
+
+const GMAIL_SYNC_INTERVAL_MS = 60_000
 
 const COMPANY_ORDER_STORAGE_KEY = 'contacts:company-order'
 const CATEGORY_FILTER_STORAGE_KEY = 'contacts:category-filter'
@@ -93,6 +97,17 @@ function rowToConfig(row: ColumnConfigRow): ContactColumnConfig {
   }
 }
 
+function buildThreadMap(threads: EmailThread[]): Record<string, EmailThread> {
+  const map: Record<string, EmailThread> = {}
+  for (const t of threads) {
+    const existing = map[t.contact_id]
+    const newer = !existing
+      || (t.last_message_at && (!existing.last_message_at || new Date(t.last_message_at) > new Date(existing.last_message_at)))
+    if (newer) map[t.contact_id] = t
+  }
+  return map
+}
+
 function configToRow(config: ContactColumnConfig, position: number): ColumnConfigRow {
   return {
     column_key: config.key,
@@ -128,6 +143,9 @@ export default function Contacts() {
     { companyId: string; anchor: HTMLElement } | null
   >(null)
 
+  const [threadsByContactId, setThreadsByContactId] = useState<Record<string, EmailThread>>({})
+  const [sendEmailFor, setSendEmailFor] = useState<{ contact: Contact; company: { name: string } } | null>(null)
+
   const [companyDrag, setCompanyDrag] = useState<{ from: number; dropIndex: number } | null>(null)
   const companyDragRef = useRef(companyDrag)
   companyDragRef.current = companyDrag
@@ -138,7 +156,7 @@ export default function Contacts() {
 
   useEffect(() => {
     async function fetchData() {
-      const [{ data: cData, error: cErr }, configResult] = await Promise.all([
+      const [{ data: cData, error: cErr }, configResult, { data: threadData, error: threadErr }] = await Promise.all([
         supabase
           .from('companies')
           .select(`id, name, website, category, starred, created_at,
@@ -148,6 +166,7 @@ export default function Contacts() {
           .from('contact_column_configs')
           .select('*')
           .order('position'),
+        supabase.from('email_threads').select('*'),
       ])
 
       if (cErr) setError(cErr.message)
@@ -165,9 +184,54 @@ export default function Contacts() {
         setColumns((configResult.data as ColumnConfigRow[]).map(rowToConfig))
       }
 
+      if (threadErr) {
+        console.warn('Could not load email_threads (run the email migration?):', threadErr.message)
+      } else {
+        setThreadsByContactId(buildThreadMap(threadData as EmailThread[]))
+      }
+
       setLoading(false)
     }
     fetchData()
+  }, [])
+
+  // Background Gmail sync: kick off once on mount and poll periodically while
+  // the tab is visible. Pulls thread state from our DB after each pass so the
+  // status badges reflect any newly-detected replies.
+  useEffect(() => {
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    async function runOnce() {
+      const result = await syncGmail()
+      if (cancelled) return
+      if (result.mode !== 'skipped') {
+        const { data, error } = await supabase.from('email_threads').select('*')
+        if (!error && data) setThreadsByContactId(buildThreadMap(data as EmailThread[]))
+      }
+    }
+
+    function schedule() {
+      if (cancelled) return
+      timer = setTimeout(async () => {
+        if (document.visibilityState === 'visible') await runOnce()
+        schedule()
+      }, GMAIL_SYNC_INTERVAL_MS)
+    }
+
+    runOnce()
+    schedule()
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') runOnce()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   const persistColumns = async (cols: ContactColumnConfig[]) => {
@@ -555,6 +619,8 @@ export default function Contacts() {
                       onUpdate={updateContact}
                       onDelete={setDeleteContactTarget}
                       onAdd={() => addContact(group.id)}
+                      onSendEmail={(c) => setSendEmailFor({ contact: c, company: { name: group.name } })}
+                      threadsByContactId={threadsByContactId}
                       newContactId={newContactId}
                     />
                   </div>
@@ -606,6 +672,26 @@ export default function Contacts() {
           contactCount={companies.find(c => c.id === deleteCompanyTarget.id)?.contacts.length ?? 0}
           onClose={() => setDeleteCompanyTarget(null)}
           onConfirm={confirmDeleteCompany}
+        />
+      )}
+      {sendEmailFor && (
+        <SendEmailModal
+          contact={sendEmailFor.contact}
+          company={sendEmailFor.company}
+          onClose={() => setSendEmailFor(null)}
+          onSent={async () => {
+            const { data } = await supabase.from('email_threads').select('*')
+            if (data) setThreadsByContactId(buildThreadMap(data as EmailThread[]))
+            // Also refresh contact rows in case status/last_contact changed.
+            const refreshed = sendEmailFor.contact.id
+            const { data: c } = await supabase.from('contacts').select('*').eq('id', refreshed).maybeSingle()
+            if (c) {
+              setCompanies(prev => prev.map(group => ({
+                ...group,
+                contacts: group.contacts.map(ct => ct.id === refreshed ? (c as Contact) : ct),
+              })))
+            }
+          }}
         />
       )}
     </div>

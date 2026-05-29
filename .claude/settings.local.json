@@ -6,7 +6,17 @@
       "Bash(mkdir -p /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/Table /Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components/ContactsTable)",
       "Bash(npx tsc *)",
       "Bash(mkdir -p /Users/weinbergershane/Documents/Programming/NetworkingAssistant/migrations)",
-      "Bash(echo \"---exit:$?\")"
+      "Bash(echo \"---exit:$?\")",
+      "Bash(curl -s http://localhost:5173/ -o /tmp/index.html -w \"HTTP %{http_code}\\\\n\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -w \"\\\\nHTTP %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s -w \"HTTP %{http_code} %{url_effective}\\\\n\" -o /dev/null http://localhost:5175/)",
+      "Bash(curl -s -w \"HTTP %{http_code} %{url_effective}\\\\n\" -o /dev/null http://localhost:5175/src/main.tsx)",
+      "Bash(curl -s http://localhost:5175/src/pages/Templates.tsx)",
+      "Bash(curl -s http://localhost:5175/src/pages/Settings.tsx)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(python3 /tmp/gen_sql.py)",
+      "Bash(npx vite *)"
     ],
     "additionalDirectories": [
       "/Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components",

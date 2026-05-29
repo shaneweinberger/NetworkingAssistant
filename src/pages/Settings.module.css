@@ -1,0 +1,214 @@
+.page {
+  padding: var(--spacing-10) var(--spacing-12);
+  max-width: 880px;
+}
+
+.header {
+  margin-bottom: var(--spacing-8);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-2);
+}
+
+.section {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-6);
+  margin-bottom: var(--spacing-4);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.sectionDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+  margin-top: var(--spacing-1);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.statusDotConnected { background-color: #22c55e; }
+.statusDotDisconnected { background-color: #9b9b9b; }
+.statusDotExpired { background-color: #f59e0b; }
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-4);
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statusLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.statusEmail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.primaryButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-bg);
+  background-color: var(--color-accent);
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
+}
+
+.dangerButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #c0392b;
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.dangerButton:hover {
+  background-color: #fae0e0;
+  border-color: #e15c5c;
+}
+
+.scopeList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+.scope {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.scopeIcon {
+  color: #22c55e;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.error {
+  font-size: var(--font-size-sm);
+  color: #c0392b;
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-3);
+  background-color: #fae0e0;
+  border-radius: var(--radius-sm);
+}
+
+.warning {
+  font-size: var(--font-size-sm);
+  color: #9e6c00;
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-3);
+  background-color: #fff9c4;
+  border-radius: var(--radius-sm);
+  line-height: 1.55;
+}
+
+.warning code {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 12px;
+  background-color: rgba(0, 0, 0, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.syncStat {
+  display: flex;
+  gap: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-3);
+}
+
+.syncStat strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
