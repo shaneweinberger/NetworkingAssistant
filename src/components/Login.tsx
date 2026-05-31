@@ -27,14 +27,14 @@ export default function Login({ onSuccess }: LoginProps) {
         <form onSubmit={handleSubmit}>
           <input
             type="password"
-            placeholder="Enter password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoFocus
           />
           <button type="submit">Sign In</button>
+          {error && <p className={styles.error}>{error}</p>}
         </form>
-        {error && <p className={styles.error}>{error}</p>}
       </div>
     </div>
   )
