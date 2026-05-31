@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { GmailCredentials } from '../types/database'
 import {
   clearCredentials,
@@ -8,9 +9,11 @@ import {
   tokenStatus,
 } from '../lib/gmail/oauth'
 import { syncGmail, type SyncResult } from '../lib/gmail/sync'
+import { logout } from '../lib/auth'
 import styles from './Settings.module.css'
 
 export default function Settings() {
+  const navigate = useNavigate()
   const [creds, setCreds] = useState<GmailCredentials | null>(null)
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
@@ -62,6 +65,14 @@ export default function Settings() {
       setError((e as Error).message)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  function handleLogout() {
+    if (window.confirm('Sign out? You\'ll need to re-enter the password to access the app.')) {
+      logout()
+      navigate('/', { replace: true })
+      window.location.reload()
     }
   }
 
@@ -177,6 +188,21 @@ export default function Settings() {
         )}
 
         {error && <div className={styles.error}>{error}</div>}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Account</h2>
+          </div>
+        </div>
+        <button
+          type="button"
+          className={styles.dangerButton}
+          onClick={handleLogout}
+        >
+          Sign Out
+        </button>
       </section>
     </div>
   )
