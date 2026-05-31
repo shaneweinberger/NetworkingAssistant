@@ -327,3 +327,112 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: var(--spacing-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  opacity: 0;
+  transition: color 120ms ease, background-color 120ms ease, opacity 120ms ease;
+}
+
+.row:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-6);
+  width: 360px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.modalTitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-2);
+}
+
+.modalBody {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-5);
+}
+
+.modalError {
+  font-size: var(--font-size-sm);
+  color: #dc2626;
+  margin-bottom: var(--spacing-3);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+}
+
+.cancelButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2) var(--spacing-4);
+  cursor: pointer;
+  transition: background-color 100ms ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteConfirmButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #fff;
+  background-color: #dc2626;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2) var(--spacing-4);
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.deleteConfirmButton:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.deleteConfirmButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

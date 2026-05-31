@@ -105,6 +105,10 @@ export default function IveyAlumni() {
   const [addingId, setAddingId] = useState<string | null>(null)
   const [addError, setAddError] = useState<string | null>(null)
 
+  const [deleteTarget, setDeleteTarget] = useState<IveyAlumnus | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
   useEffect(() => {
     async function fetchAll() {
       const [alumniRes, contactsRes] = await Promise.all([
@@ -168,7 +172,7 @@ export default function IveyAlumni() {
     }
 
     const { error: insertContactErr } = await supabase.from('contacts').insert({
-      company_id: companyId,
+      company_id: companyId!,
       name: alumnus.full_name,
       role: alumnus.job_title,
       email: null,
@@ -191,6 +195,21 @@ export default function IveyAlumni() {
       return next
     })
     setAddingId(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError(null)
+    const { error } = await supabase.from('ivey_alumni').delete().eq('id', deleteTarget.id)
+    if (error) {
+      setDeleteError(error.message)
+      setDeleting(false)
+      return
+    }
+    setRows(prev => prev.filter(r => r.id !== deleteTarget.id))
+    setDeleteTarget(null)
+    setDeleting(false)
   }
 
   const industries = useMemo(() => {
@@ -348,12 +367,13 @@ export default function IveyAlumni() {
                       </th>
                     )
                   })}
+                  <th className={styles.th} aria-label="Delete" />
                 </tr>
               </thead>
               <tbody>
                 {visible.length === 0 && (
                   <tr>
-                    <td colSpan={COLUMNS.length + 1} className={styles.emptyRow}>
+                    <td colSpan={COLUMNS.length + 2} className={styles.emptyRow}>
                       No matching alumni.
                     </td>
                   </tr>
@@ -426,6 +446,19 @@ export default function IveyAlumni() {
                     <td className={styles.td}>
                       {r.job_date_range || <span className={styles.muted}>—</span>}
                     </td>
+                    <td className={`${styles.td} ${styles.starCell}`}>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => setDeleteTarget(r)}
+                        aria-label={`Delete ${r.full_name}`}
+                        title="Delete from database"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M2 3.5h10M5.5 3.5V2.5h3v1M5.5 6v4.5M8.5 6v4.5M3 3.5l.75 8h6.5l.75-8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </td>
                   </tr>
                   )
                 })}
@@ -471,6 +504,36 @@ export default function IveyAlumni() {
             </div>
           </div>
         </>
+      )}
+
+      {deleteTarget && (
+        <div className={styles.modalOverlay} onClick={() => { if (!deleting) setDeleteTarget(null) }}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <p className={styles.modalTitle}>Delete alumnus?</p>
+            <p className={styles.modalBody}>
+              <strong>{deleteTarget.full_name}</strong> will be permanently removed from the database.
+            </p>
+            {deleteError && <p className={styles.modalError}>{deleteError}</p>}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmButton}
+                onClick={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
