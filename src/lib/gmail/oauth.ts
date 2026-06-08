@@ -51,6 +51,20 @@ interface TokenClient {
 
 let scriptPromise: Promise<void> | null = null
 
+// In-memory token cache. Avoids re-hitting the DB (and potentially the popup
+// refresh path) on every Gmail API call within a single page session.
+let cachedToken: { token: string; expiresAtMs: number } | null = null
+
+// Coalesces concurrent refresh requests so we never open more than one silent
+// OAuth popup at a time, even if many gmailFetch calls fire in parallel.
+let inFlightRefresh: Promise<string | null> | null = null
+
+// Once silent refresh fails (e.g. user signed out of Google, scope changed,
+// third-party cookies blocked), don't keep retrying it on every background
+// sync — that's what causes the popup to flash repeatedly. Cleared when the
+// user manually reconnects via connectGmail() or clears credentials.
+let silentRefreshBlocked = false
+
 function loadGisScript(): Promise<void> {
   if (typeof window === 'undefined') return Promise.reject(new Error('not in browser'))
   if (window.google?.accounts?.oauth2) return Promise.resolve()
@@ -121,6 +135,9 @@ export async function clearCredentials(): Promise<void> {
     }
   }
   await supabase.from('gmail_credentials').delete().eq('id', 1)
+  cachedToken = null
+  silentRefreshBlocked = false
+  inFlightRefresh = null
 }
 
 async function fetchUserEmail(accessToken: string): Promise<string | null> {
@@ -161,7 +178,8 @@ async function requestToken(prompt: 'consent' | 'none'): Promise<TokenResponse> 
 export async function connectGmail(): Promise<GmailCredentials> {
   const response = await requestToken('consent')
   const email = await fetchUserEmail(response.access_token)
-  const expiresAt = new Date(Date.now() + response.expires_in * 1000).toISOString()
+  const expiresAtMs = Date.now() + response.expires_in * 1000
+  const expiresAt = new Date(expiresAtMs).toISOString()
   await saveCredentials({
     email,
     access_token: response.access_token,
@@ -169,6 +187,9 @@ export async function connectGmail(): Promise<GmailCredentials> {
     expires_at: expiresAt,
     connected_at: new Date().toISOString(),
   })
+  cachedToken = { token: response.access_token, expiresAtMs }
+  silentRefreshBlocked = false
+  inFlightRefresh = null
   const creds = await loadCredentials()
   if (!creds) throw new Error('Failed to persist Gmail credentials')
   return creds
@@ -185,24 +206,46 @@ function isExpired(creds: GmailCredentials): boolean {
  * (in which case the caller should prompt the user to reconnect).
  */
 export async function getAccessToken(): Promise<string | null> {
+  if (cachedToken && cachedToken.expiresAtMs - TOKEN_REFRESH_BUFFER_MS > Date.now()) {
+    return cachedToken.token
+  }
+
   const creds = await loadCredentials()
   if (!creds || !creds.access_token) return null
-  if (!isExpired(creds)) return creds.access_token
-
-  // Try silent refresh first.
-  try {
-    const response = await requestToken('none')
-    const expiresAt = new Date(Date.now() + response.expires_in * 1000).toISOString()
-    await saveCredentials({
-      access_token: response.access_token,
-      scope: response.scope,
-      expires_at: expiresAt,
-    })
-    return response.access_token
-  } catch (err) {
-    console.warn('Silent Gmail token refresh failed; user must reconnect.', err)
-    return null
+  if (!isExpired(creds)) {
+    const expiresAtMs = creds.expires_at ? new Date(creds.expires_at).getTime() : 0
+    cachedToken = { token: creds.access_token, expiresAtMs }
+    return creds.access_token
   }
+
+  // Silent refresh previously failed — don't keep popping up the OAuth window
+  // on every poll. The user must reconnect explicitly to clear this.
+  if (silentRefreshBlocked) return null
+
+  if (inFlightRefresh) return inFlightRefresh
+
+  inFlightRefresh = (async () => {
+    try {
+      const response = await requestToken('none')
+      const expiresAtMs = Date.now() + response.expires_in * 1000
+      const expiresAt = new Date(expiresAtMs).toISOString()
+      await saveCredentials({
+        access_token: response.access_token,
+        scope: response.scope,
+        expires_at: expiresAt,
+      })
+      cachedToken = { token: response.access_token, expiresAtMs }
+      return response.access_token
+    } catch (err) {
+      console.warn('Silent Gmail token refresh failed; user must reconnect.', err)
+      silentRefreshBlocked = true
+      return null
+    } finally {
+      inFlightRefresh = null
+    }
+  })()
+
+  return inFlightRefresh
 }
 
 export function tokenStatus(creds: GmailCredentials | null): 'disconnected' | 'connected' | 'expired' {
