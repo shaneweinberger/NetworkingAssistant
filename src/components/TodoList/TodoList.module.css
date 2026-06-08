@@ -1,24 +1,23 @@
-.section {
+.todoBoard {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-3);
+  gap: var(--spacing-5);
 }
 
-.sectionHeader {
+.boardHeader {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: var(--spacing-1);
 }
 
-.sectionTitle {
+.boardTitle {
   font-size: var(--font-size-lg);
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
 }
 
-.sectionMeta {
+.boardMeta {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
@@ -45,6 +44,76 @@
   border-radius: 3px;
 }
 
+/* ── Sections ── */
+
+.sections {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-4);
+  align-items: start;
+}
+
+.section {
+  background-color: #f7f7f7;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 12px;
+  transition: background-color 120ms ease;
+}
+
+.sectionHeader:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.sectionLabelRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+}
+
+.sectionLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.sectionCount {
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+
+.chevron {
+  color: var(--color-text-tertiary);
+  transition: transform 200ms ease;
+  flex-shrink: 0;
+}
+
+.chevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--spacing-3) var(--spacing-3);
+}
+
+/* ── Rows ── */
+
 .list {
   display: flex;
   flex-direction: column;
@@ -53,7 +122,7 @@
 .row {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-2);
   padding: 2px 0;
   border-radius: var(--radius-sm);
@@ -61,7 +130,7 @@
 }
 
 .row:hover {
-  background-color: var(--color-bg-subtle);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .rowDragging {
@@ -96,6 +165,7 @@
   justify-content: center;
   width: 14px;
   height: 22px;
+  margin-top: 4px;
   padding: 0;
   background: none;
   border: none;
@@ -120,6 +190,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
+  margin-top: 5px;
   background-color: var(--color-bg);
   border: 1.5px solid var(--color-border-strong);
   border-radius: 3px;
@@ -147,8 +218,12 @@
   border: none;
   font-family: inherit;
   font-size: var(--font-size-base);
+  line-height: 1.45;
   color: var(--color-text-primary);
   outline: none;
+  resize: none;
+  overflow: hidden;
+  display: block;
 }
 
 .input::placeholder {
@@ -166,6 +241,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
+  margin-top: 3px;
   background: none;
   border: none;
   color: var(--color-text-tertiary);
@@ -182,7 +258,84 @@
 
 .deleteBtn:hover {
   color: #c0392b;
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Confirmation modal ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-6);
+  width: 380px;
+  max-width: calc(100vw - var(--spacing-8));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.modalTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-3);
+}
+
+.modalBody {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--spacing-5);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+}
+
+.cancelButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  transition: background-color 120ms ease;
+}
+
+.cancelButton:hover {
   background-color: var(--color-bg-hover);
+}
+
+.deleteButton {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #fff;
+  background-color: #c0392b;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  transition: opacity 120ms ease;
+}
+
+.deleteButton:hover {
+  opacity: 0.85;
 }
 
 .addBtn {
@@ -194,7 +347,8 @@
   border: none;
   cursor: pointer;
   padding: 6px var(--spacing-2);
-  margin-left: 22px; /* align with input text after grip */
+  margin-top: var(--spacing-1);
+  margin-left: 22px;
   border-radius: var(--radius-sm);
   font-family: inherit;
   transition: color 100ms ease, background-color 100ms ease;
@@ -202,5 +356,5 @@
 
 .addBtn:hover {
   color: var(--color-text-primary);
-  background-color: var(--color-bg-hover);
+  background-color: rgba(0, 0, 0, 0.04);
 }

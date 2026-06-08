@@ -95,6 +95,7 @@ export async function loadBoardData(rules: ThreadRules, now: number = Date.now()
   const board: BoardData = { sent: [], follow_up: [], reply: [] }
 
   for (const thread of threadList) {
+    if (thread.closed_at) continue
     const action = deriveAction(thread, rules, now)
     const column = bucketForAction(action.kind)
     if (!column) continue

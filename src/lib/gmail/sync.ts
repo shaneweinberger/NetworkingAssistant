@@ -127,40 +127,10 @@ async function loadContactsByEmail(): Promise<Map<string, Contact>> {
   return map
 }
 
-async function loadIgnoredThreadIds(): Promise<Set<string>> {
-  const { data, error } = await supabase
-    .from('gmail_ignored_threads')
-    .select('gmail_thread_id')
-  if (error) {
-    console.warn('Failed to load ignored thread cache:', error.message)
-    return new Set()
-  }
-  return new Set((data as { gmail_thread_id: string }[]).map(r => r.gmail_thread_id))
-}
-
-async function markThreadIgnored(threadId: string): Promise<void> {
-  const { error } = await supabase
-    .from('gmail_ignored_threads')
-    .upsert(
-      { gmail_thread_id: threadId, seen_at: new Date().toISOString() },
-      { onConflict: 'gmail_thread_id' },
-    )
-  if (error) console.warn('Failed to mark thread ignored:', error.message)
-}
-
-async function unmarkThreadIgnored(threadId: string): Promise<void> {
-  const { error } = await supabase
-    .from('gmail_ignored_threads')
-    .delete()
-    .eq('gmail_thread_id', threadId)
-  if (error) console.warn('Failed to clear ignored thread:', error.message)
-}
-
 /**
  * Inspect a Gmail thread we haven't seen before. If any outgoing message in
  * it was addressed to a known contact, create an email_threads row for that
- * contact. Otherwise add the thread to the ignored cache so we don't re-scan
- * it next poll.
+ * contact. Returns null if no contact matches.
  */
 async function discoverThread(
   threadId: string,
@@ -177,7 +147,6 @@ async function discoverThread(
   }
 
   if (!matched) {
-    await markThreadIgnored(threadId)
     return null
   }
 
@@ -222,10 +191,9 @@ export async function syncGmail(): Promise<SyncResult> {
     return { updatedThreads: 0, scanned: 0, mode: 'skipped' }
   }
 
-  const [trackedThreads, contactsByEmail, ignoredIds] = await Promise.all([
+  const [trackedThreads, contactsByEmail] = await Promise.all([
     loadAllTrackedThreads(),
     loadContactsByEmail(),
-    loadIgnoredThreadIds(),
   ])
   const trackedById = new Map(trackedThreads.map(t => [t.gmail_thread_id, t]))
   const ownEmail = creds.email
@@ -271,9 +239,10 @@ export async function syncGmail(): Promise<SyncResult> {
         continue
       }
 
-      // Unknown thread — but skip if we already concluded it isn't relevant.
-      if (ignoredIds.has(threadId)) continue
-
+      // Unknown thread — try to discover it even if we previously concluded it
+      // wasn't relevant. A new activity event (listHistory hit) means something
+      // changed: the contact may have been added since the last scan, or a
+      // reply arrived on an old thread we had no reason to track before.
       const discovered = await discoverThread(threadId, ownEmail, contactsByEmail)
       if (discovered) updated++
     }
@@ -330,9 +299,6 @@ export async function rescanContact(contact: Contact, withinDays = 90): Promise<
       })
       if (upserted) {
         added++
-        // If we previously ignored this thread (e.g. it wasn't to any contact
-        // yet), clear the ignore cache so future polls keep tracking it.
-        await unmarkThreadIgnored(threadId)
       }
     }
     return added

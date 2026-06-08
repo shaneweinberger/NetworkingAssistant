@@ -52,59 +52,85 @@
   font-weight: 500;
 }
 
-.columns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-5);
-}
+/* ── Sections (vertical stack) ── */
 
-.column {
+.sections {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  background-color: #f7f7f7;
-  border-radius: 12px;
-  padding: var(--spacing-3);
 }
 
-.columnHeader {
+.section {
+  background-color: #f7f7f7;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 12px;
+  transition: background-color 120ms ease;
+}
+
+.sectionHeader:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.sectionLabelRow {
   display: flex;
   align-items: baseline;
   gap: var(--spacing-2);
-  padding: 0 var(--spacing-1) var(--spacing-2);
 }
 
-.columnLabel {
+.sectionLabel {
   font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--color-text-primary);
 }
 
-.columnCount {
+.sectionCount {
   font-size: var(--font-size-xs);
   font-weight: 400;
   color: var(--color-text-tertiary);
 }
 
-.columnBody {
+.chevron {
+  color: var(--color-text-tertiary);
+  transition: transform 200ms ease;
+  flex-shrink: 0;
+}
+
+.chevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+/* Cards laid out horizontally, wrapping */
+.sectionBody {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: var(--spacing-2);
-  flex: 1;
+  padding: 0 var(--spacing-3) var(--spacing-3);
 }
 
 .placeholder {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
-  padding: var(--spacing-3) var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-1) var(--spacing-2);
 }
 
 /* ── Card ── */
-/* Apple-style: floating card feel via shadow, not border.
-   Background is white, shadow provides the lift. */
 .card {
-  width: 100%;
+  width: 220px;
   text-align: left;
   background-color: var(--color-bg);
   border: none;

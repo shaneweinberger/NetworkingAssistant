@@ -17,6 +17,9 @@ function Root() {
 
   if (loading) return null
 
+  // OAuth popup lands here — skip the password gate so the callback can run.
+  if (window.location.pathname === '/auth/gmail/callback') return <App />
+
   return authenticated ? <App /> : <Login onSuccess={() => setAuthenticated(true)} />
 }
 

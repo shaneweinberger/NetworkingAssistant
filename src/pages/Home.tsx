@@ -19,11 +19,12 @@ export default function Home() {
   const [board, setBoard] = useState<BoardData>(EMPTY_BOARD)
   const [loading, setLoading] = useState(true)
   const [gmailConnected, setGmailConnected] = useState(false)
+  const [gmailReconnectRequired, setGmailReconnectRequired] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [replyFor, setReplyFor] = useState<{
     contact: Contact
     company: Pick<Company, 'name'>
-    replyToThread: { gmailThreadId: string; subject: string | null }
+    replyToThread: { threadId: string; gmailThreadId: string; subject: string | null }
   } | null>(null)
 
   const rulesRef = useRef(rules)
@@ -54,8 +55,9 @@ export default function Home() {
     let timer: ReturnType<typeof setTimeout> | null = null
 
     async function runOnce() {
-      await syncGmail()
+      const result = await syncGmail()
       if (cancelled) return
+      if (result.reconnectRequired) setGmailReconnectRequired(true)
       const data = await loadBoardData(rulesRef.current)
       if (!cancelled) setBoard(data)
     }
@@ -88,6 +90,7 @@ export default function Home() {
       contact: card.contact,
       company: { name: card.company?.name ?? '' },
       replyToThread: {
+        threadId: card.thread.id,
         gmailThreadId: card.thread.gmail_thread_id,
         subject: card.thread.subject,
       },
@@ -116,6 +119,13 @@ export default function Home() {
         <p className={styles.subtitle}>Welcome to your networking assistant.</p>
       </header>
 
+      {gmailReconnectRequired && (
+        <div className={styles.reconnectBanner}>
+          Gmail session expired.{' '}
+          <a className={styles.reconnectLink} href="/settings">Reconnect in Settings →</a>
+        </div>
+      )}
+
       <ThreadsBoard
         data={board}
         loading={loading}
@@ -142,7 +152,9 @@ export default function Home() {
           company={replyFor.company}
           replyToThread={replyFor.replyToThread}
           onClose={() => setReplyFor(null)}
-          onSent={async () => {
+          onSent={async () => { await refreshBoard() }}
+          onThreadClosed={async () => {
+            setReplyFor(null)
             await refreshBoard()
           }}
         />

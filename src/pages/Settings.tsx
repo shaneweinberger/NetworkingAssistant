@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { GmailCredentials } from '../types/database'
+import type { Contact, GmailCredentials } from '../types/database'
 import {
   clearCredentials,
   connectGmail,
@@ -8,7 +8,8 @@ import {
   loadCredentials,
   tokenStatus,
 } from '../lib/gmail/oauth'
-import { syncGmail, type SyncResult } from '../lib/gmail/sync'
+import { syncGmail, rescanContact, type SyncResult } from '../lib/gmail/sync'
+import { supabase } from '../lib/supabase'
 import { logout } from '../lib/auth'
 import styles from './Settings.module.css'
 
@@ -18,6 +19,8 @@ export default function Settings() {
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [rescanning, setRescanning] = useState(false)
+  const [rescanResult, setRescanResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastSync, setLastSync] = useState<SyncResult | null>(null)
 
@@ -65,6 +68,35 @@ export default function Settings() {
       setError((e as Error).message)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  async function handleRescanContacts() {
+    setRescanning(true)
+    setRescanResult(null)
+    setError(null)
+    try {
+      const { data, error: dbError } = await supabase
+        .from('contacts')
+        .select('*')
+        .not('email', 'is', null)
+      if (dbError) throw new Error(dbError.message)
+      const contacts = (data as Contact[]) ?? []
+      let totalAdded = 0
+      // Use a 365-day window to catch older threads a 90-day scan would miss.
+      for (const contact of contacts) {
+        const added = await rescanContact(contact, 365)
+        totalAdded += added
+      }
+      setRescanResult(
+        totalAdded > 0
+          ? `Found ${totalAdded} new thread${totalAdded === 1 ? '' : 's'} across ${contacts.length} contacts.`
+          : `Scanned ${contacts.length} contacts — no new threads found.`,
+      )
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setRescanning(false)
     }
   }
 
@@ -122,7 +154,7 @@ export default function Settings() {
                   <div className={styles.statusInfo}>
                     <span className={styles.statusLabel}>
                       {status === 'connected' ? 'Connected'
-                        : status === 'expired' ? 'Token expired — will refresh on next use'
+                        : status === 'expired' ? 'Session expired — please reconnect'
                           : 'Not connected'}
                     </span>
                     {creds?.email && (
@@ -155,7 +187,7 @@ export default function Settings() {
                         onClick={handleConnect}
                         disabled={connecting}
                       >
-                        {connecting ? 'Opening Google…' : 'Connect Gmail'}
+                        {connecting ? 'Waiting for Google…' : 'Connect Gmail'}
                       </button>
                     )}
                   </div>
@@ -182,6 +214,27 @@ export default function Settings() {
                     <span>Updated: <strong>{lastSync.updatedThreads}</strong></span>
                   </div>
                 )}
+
+                {creds && (
+                  <div className={styles.rescanRow}>
+                    <div>
+                      <p className={styles.rescanLabel}>Missing threads?</p>
+                      <p className={styles.rescanDescription}>
+                        Searches your Gmail sent folder for conversations with each contact that
+                        may not have been picked up automatically.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={handleRescanContacts}
+                      disabled={rescanning}
+                    >
+                      {rescanning ? 'Scanning…' : 'Rescan contacts'}
+                    </button>
+                  </div>
+                )}
+                {rescanResult && <div className={styles.rescanResult}>{rescanResult}</div>}
               </>
             )}
           </>

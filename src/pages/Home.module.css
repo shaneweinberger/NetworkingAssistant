@@ -1,6 +1,5 @@
 .page {
   padding: var(--spacing-10) var(--spacing-12);
-  max-width: 960px;
 }
 
 .header {
@@ -56,4 +55,20 @@
 
 .todoSection {
   margin-top: var(--spacing-10);
+}
+
+.reconnectBanner {
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 35%, transparent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.reconnectLink {
+  color: var(--color-text-primary);
+  font-weight: 500;
+  text-decoration: underline;
 }

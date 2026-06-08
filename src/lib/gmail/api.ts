@@ -39,9 +39,10 @@ async function gmailFetch(path: string, init: RequestInit = {}): Promise<Respons
 }
 
 // RFC 2822 message encoded as base64url (Gmail's required format).
-// We keep it pure-text and let Gmail wrap; no MIME multipart needed.
-// When `inReplyTo` is provided, the message will thread under that
-// message id so Gmail puts it in the same conversation.
+// Sent as text/html so paragraphs reflow to the client's full width instead
+// of breaking at the textarea's line endings. When `inReplyTo` is provided,
+// the message will thread under that message id so Gmail puts it in the same
+// conversation.
 function encodeRfc2822(args: {
   to: string
   subject: string
@@ -50,17 +51,27 @@ function encodeRfc2822(args: {
   inReplyTo?: string | null
   references?: string | null
 }): string {
+  // Convert plain-text body to minimal HTML so the client reflows lines.
+  const htmlBody = args.body
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n\n+/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+  const fullHtml = `<div style="font-family:sans-serif;font-size:14px;line-height:1.6"><p>${htmlBody}</p></div>`
+
   const lines = [
     `To: ${args.to}`,
     args.fromEmail ? `From: ${args.fromEmail}` : null,
     `Subject: ${encodeSubject(args.subject)}`,
     args.inReplyTo ? `In-Reply-To: ${args.inReplyTo}` : null,
     args.references ? `References: ${args.references}` : null,
-    'Content-Type: text/plain; charset="UTF-8"',
     'MIME-Version: 1.0',
+    'Content-Type: text/html; charset="UTF-8"',
     '',
-    args.body,
-  ].filter(Boolean) as string[]
+    fullHtml,
+  ].filter(line => line !== null) as string[]
   const raw = lines.join('\r\n')
 
   // Browser-safe base64url
@@ -233,6 +244,72 @@ export async function getThread(threadId: string): Promise<ThreadSummary | null>
     if (err instanceof GmailApiError && err.status === 404) return null
     throw err
   }
+}
+
+export interface FullThreadMessage {
+  id: string
+  internalDate: string
+  labelIds: string[]
+  from: string | null
+  subject: string | null
+  bodyText: string | null
+}
+
+type GmailPayload = {
+  mimeType: string
+  body?: { data?: string }
+  parts?: GmailPayload[]
+}
+
+function base64urlDecode(b64url: string): string {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/')
+  const binary = atob(b64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new TextDecoder('utf-8').decode(bytes)
+}
+
+function extractPlainText(payload: GmailPayload): string | null {
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    try { return base64urlDecode(payload.body.data) } catch { return null }
+  }
+  if (payload.parts) {
+    // Prefer text/plain over other parts in multipart messages.
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/plain') {
+        const t = extractPlainText(part)
+        if (t) return t
+      }
+    }
+    for (const part of payload.parts) {
+      const t = extractPlainText(part)
+      if (t) return t
+    }
+  }
+  return null
+}
+
+/**
+ * Fetches a Gmail thread with full message bodies decoded to plain text.
+ */
+export async function getThreadMessages(threadId: string): Promise<FullThreadMessage[]> {
+  const res = await gmailFetch(`/threads/${threadId}?format=full`)
+  const json = await res.json() as {
+    messages: Array<{
+      id: string
+      internalDate: string
+      labelIds?: string[]
+      payload?: GmailPayload & { headers?: Array<{ name: string; value: string }> }
+    }>
+  }
+  return (json.messages ?? []).map(m => ({
+    id: m.id,
+    internalDate: m.internalDate,
+    labelIds: m.labelIds ?? [],
+    from: header(m.payload?.headers, 'From'),
+    subject: header(m.payload?.headers, 'Subject'),
+    bodyText: m.payload ? extractPlainText(m.payload) : null,
+  }))
 }
 
 /**

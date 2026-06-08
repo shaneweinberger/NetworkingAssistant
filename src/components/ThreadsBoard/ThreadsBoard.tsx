@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import type { BoardCard, BoardColumnKey, BoardData } from '../../lib/threads/board'
 import { outreachLabel, relativeTime } from '../../lib/threads/board'
 import styles from './ThreadsBoard.module.css'
@@ -19,9 +19,9 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'sent',       label: 'Sent',       emptyText: 'No active outreach',  ctaLabel: null },
-  { key: 'follow_up',  label: 'Follow-up',  emptyText: 'No follow-ups due',   ctaLabel: 'Follow up' },
-  { key: 'reply',      label: 'Reply',      emptyText: 'Nothing to reply to', ctaLabel: 'Reply' },
+  { key: 'reply',      label: 'Awaiting Reply',  emptyText: 'Nothing to reply to', ctaLabel: 'Reply' },
+  { key: 'follow_up',  label: 'Follow-Up Due',   emptyText: 'No follow-ups due',   ctaLabel: 'Follow up' },
+  { key: 'sent',       label: 'Sent',            emptyText: 'No active outreach',  ctaLabel: null },
 ]
 
 export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRules, onCardClick }: Props) {
@@ -30,6 +30,15 @@ export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRule
     follow_up: data.follow_up.length,
     reply: data.reply.length,
   }), [data])
+
+  const [collapsed, setCollapsed] = useState<Record<BoardColumnKey, boolean>>({
+    reply: false,
+    follow_up: false,
+    sent: false,
+  })
+
+  const toggle = (key: BoardColumnKey) =>
+    setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
 
   return (
     <section className={styles.board}>
@@ -63,29 +72,51 @@ export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRule
         </div>
       )}
 
-      <div className={styles.columns}>
-        {COLUMNS.map(col => (
-          <div key={col.key} className={styles.column}>
-            <div className={styles.columnHeader}>
-              <span className={styles.columnLabel}>{col.label}</span>
-              <span className={styles.columnCount}>{counts[col.key]}</span>
-            </div>
-            <div className={styles.columnBody}>
-              {loading && <div className={styles.placeholder}>Loading…</div>}
-              {!loading && data[col.key].length === 0 && (
-                <div className={styles.placeholder}>{col.emptyText}</div>
+      <div className={styles.sections}>
+        {COLUMNS.map(col => {
+          const isCollapsed = collapsed[col.key]
+          return (
+            <div key={col.key} className={styles.section}>
+              <button
+                type="button"
+                className={styles.sectionHeader}
+                onClick={() => toggle(col.key)}
+                aria-expanded={!isCollapsed}
+              >
+                <div className={styles.sectionLabelRow}>
+                  <span className={styles.sectionLabel}>{col.label}</span>
+                  <span className={styles.sectionCount}>{counts[col.key]}</span>
+                </div>
+                <svg
+                  className={`${styles.chevron} ${isCollapsed ? styles.chevronCollapsed : ''}`}
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                >
+                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {!isCollapsed && (
+                <div className={styles.sectionBody}>
+                  {loading && <div className={styles.placeholder}>Loading…</div>}
+                  {!loading && data[col.key].length === 0 && (
+                    <div className={styles.placeholder}>{col.emptyText}</div>
+                  )}
+                  {!loading && data[col.key].map(card => (
+                    <ThreadCard
+                      key={card.thread.id}
+                      card={card}
+                      ctaLabel={col.ctaLabel}
+                      onClick={() => onCardClick(card)}
+                    />
+                  ))}
+                </div>
               )}
-              {!loading && data[col.key].map(card => (
-                <ThreadCard
-                  key={card.thread.id}
-                  card={card}
-                  ctaLabel={col.ctaLabel}
-                  onClick={() => onCardClick(card)}
-                />
-              ))}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </section>
   )
