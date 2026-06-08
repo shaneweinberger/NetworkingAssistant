@@ -1,0 +1,13 @@
+project_id = "aebhhantiqfvnmukqjeu"
+
+[functions.gmail-oauth-offline]
+verify_jwt = false
+
+[functions.sync-and-extract]
+verify_jwt = true
+
+[functions.send-digest-email]
+verify_jwt = true
+
+[functions.donna-action]
+verify_jwt = false

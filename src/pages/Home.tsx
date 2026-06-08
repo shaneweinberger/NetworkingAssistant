@@ -1,4 +1,5 @@
 import TodoList from '../components/TodoList/TodoList'
+import DonnaWidget from '../components/DonnaWidget/DonnaWidget'
 import styles from './Home.module.css'
 
 export default function Home() {
@@ -9,19 +10,8 @@ export default function Home() {
         <p className={styles.subtitle}>Welcome to your networking assistant.</p>
       </header>
 
-      <div className={styles.grid}>
-        <div className={styles.card}>
-          <p className={styles.cardLabel}>Connections</p>
-          <p className={styles.cardValue}>—</p>
-        </div>
-        <div className={styles.card}>
-          <p className={styles.cardLabel}>Recent activity</p>
-          <p className={styles.cardValue}>—</p>
-        </div>
-        <div className={styles.card}>
-          <p className={styles.cardLabel}>Follow-ups due</p>
-          <p className={styles.cardValue}>—</p>
-        </div>
+      <div className={styles.donnaSection}>
+        <DonnaWidget />
       </div>
 
       <div className={styles.todoSection}>

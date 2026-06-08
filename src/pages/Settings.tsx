@@ -10,6 +10,7 @@ import {
 } from '../lib/gmail/oauth'
 import { syncGmail, type SyncResult } from '../lib/gmail/sync'
 import { logout } from '../lib/auth'
+import DonnaSettings from '../components/DonnaSettings/DonnaSettings'
 import styles from './Settings.module.css'
 
 export default function Settings() {
@@ -188,6 +189,20 @@ export default function Settings() {
         )}
 
         {error && <div className={styles.error}>{error}</div>}
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Donna (AI assistant)</h2>
+            <p className={styles.sectionDescription}>
+              Proactive assistant that watches your inbox, classifies new
+              messages, and surfaces action items on the Home page + a daily
+              8am email digest. Requires Gmail with offline access.
+            </p>
+          </div>
+        </div>
+        <DonnaSettings />
       </section>
 
       <section className={styles.section}>

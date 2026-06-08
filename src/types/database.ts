@@ -54,6 +54,55 @@ export interface GmailCredentials {
   last_history_id: string | null
   connected_at: string
   updated_at: string
+  assistant_start_history_id: string | null
+  assistant_started_at: string | null
+  last_sync_at: string | null
+  last_error: string | null
+  last_error_at: string | null
+  digest_recipient: string | null
+  digest_timezone: string | null
+}
+
+export type ActionItemKind = 'reply_needed' | 'follow_up_due' | 'promise_kept' | 'chase_response' | 'review'
+export type ActionItemStatus = 'open' | 'snoozed' | 'done' | 'dismissed'
+export type Urgency = 'low' | 'med' | 'high'
+
+export interface ActionItem {
+  id: string
+  kind: ActionItemKind
+  status: ActionItemStatus
+  urgency: Urgency
+  contact_id: string | null
+  gmail_thread_id: string | null
+  gmail_message_id: string | null
+  category: string | null
+  summary: string
+  detail: string | null
+  due_at: string | null
+  snooze_until: string | null
+  auto_resolved: boolean
+  dismissal_reason: string | null
+  created_at: string
+  updated_at: string
+  resolved_at: string | null
+}
+
+export interface AssistantCategory {
+  id: string
+  name: string
+  description: string
+  enabled: boolean
+  created_at: string
+}
+
+export interface AssistantScopeRule {
+  id: string
+  rule_type: 'allow' | 'deny'
+  match_type: 'email' | 'domain' | 'subject_contains'
+  pattern: string
+  source: 'user' | 'auto_learned'
+  notes: string | null
+  created_at: string
 }
 
 export interface EmailThread {
