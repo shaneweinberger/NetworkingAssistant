@@ -7,7 +7,7 @@ import {
   hasUnfilledPlaceholders,
   substitute,
 } from '../../lib/templates/placeholders'
-import { createDraft, sendMessage, GmailAuthError } from '../../lib/gmail/api'
+import { createDraft, sendMessage, getThreadReplyHeaders, GmailAuthError } from '../../lib/gmail/api'
 import { upsertThreadForContact } from '../../lib/gmail/sync'
 import { connectGmail, loadCredentials } from '../../lib/gmail/oauth'
 import styles from './SendEmailModal.module.css'
@@ -17,9 +17,13 @@ interface Props {
   company: Pick<Company, 'name'>
   onClose: () => void
   onSent?: () => void
+  // When set, the message will be sent inside this Gmail thread (reply mode):
+  // adds In-Reply-To / References headers, prefills "Re: …" subject, and
+  // pins threadId so Gmail keeps it in the same conversation.
+  replyToThread?: { gmailThreadId: string; subject: string | null } | null
 }
 
-export default function SendEmailModal({ contact, company, onClose, onSent }: Props) {
+export default function SendEmailModal({ contact, company, onClose, onSent, replyToThread }: Props) {
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -31,6 +35,7 @@ export default function SendEmailModal({ contact, company, onClose, onSent }: Pr
   const [busy, setBusy] = useState<null | 'send' | 'draft'>(null)
   const [banner, setBanner] = useState<{ kind: 'error' | 'warn' | 'info'; text: string; cta?: { label: string; onClick: () => void } } | null>(null)
   const [gmailConnected, setGmailConnected] = useState<boolean | null>(null)
+  const [replyHeaders, setReplyHeaders] = useState<{ messageId: string | null; references: string | null } | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -50,6 +55,30 @@ export default function SendEmailModal({ contact, company, onClose, onSent }: Pr
       setLoadingTemplates(false)
     })()
   }, [])
+
+  // In reply mode, fetch the headers for the latest message in the thread so
+  // we can build In-Reply-To / References when sending. Also prefill the
+  // subject as "Re: <original>" if the user hasn't picked a template.
+  useEffect(() => {
+    if (!replyToThread || !gmailConnected) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const headers = await getThreadReplyHeaders(replyToThread.gmailThreadId)
+        if (cancelled || !headers) return
+        setReplyHeaders({ messageId: headers.messageId, references: headers.references })
+        if (!subject) {
+          const base = replyToThread.subject ?? headers.subject ?? ''
+          const prefix = base.toLowerCase().startsWith('re:') ? '' : 'Re: '
+          setSubject(`${prefix}${base}`)
+        }
+      } catch {
+        // best-effort: a missing reply header just means the message goes out
+        // un-threaded. Gmail will still associate it via threadId.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [replyToThread, gmailConnected, subject])
 
   const autoFilled = useMemo(
     () => autoFillFromContact({
@@ -140,6 +169,8 @@ export default function SendEmailModal({ contact, company, onClose, onSent }: Pr
         subject: renderedSubject,
         body: renderedBody,
         fromEmail: fromCreds?.email ?? null,
+        threadId: replyToThread?.gmailThreadId ?? null,
+        inReplyToMessageId: replyHeaders?.messageId ?? null,
       }
       const result = asDraft ? await createDraft(sendArgs) : await sendMessage(sendArgs)
 
@@ -204,7 +235,9 @@ export default function SendEmailModal({ contact, company, onClose, onSent }: Pr
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <header className={styles.header}>
           <div className={styles.headerLeft}>
-            <span className={styles.title}>Email {contact.name || 'contact'}</span>
+            <span className={styles.title}>
+              {replyToThread ? 'Reply to' : 'Email'} {contact.name || 'contact'}
+            </span>
             <span className={styles.subtitle}>
               {company.name}{contact.role ? ` · ${contact.role}` : ''}
             </span>

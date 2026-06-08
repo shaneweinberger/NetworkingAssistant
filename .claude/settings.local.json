@@ -16,7 +16,10 @@
       "Bash(curl -s http://localhost:5175/src/pages/Settings.tsx)",
       "Bash(pkill -f \"vite\")",
       "Bash(python3 /tmp/gen_sql.py)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ],
     "additionalDirectories": [
       "/Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components",

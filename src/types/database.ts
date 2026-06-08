@@ -95,3 +95,15 @@ export interface EmailEvent {
   subject: string | null
   occurred_at: string
 }
+
+export interface AppSettings {
+  id: number
+  follow_up_after_days: number
+  reengage_after_days: number
+  updated_at: string
+}
+
+export interface GmailIgnoredThread {
+  gmail_thread_id: string
+  seen_at: string
+}

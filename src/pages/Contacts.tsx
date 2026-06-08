@@ -14,7 +14,7 @@ import ContactsTable, {
 } from '../components/ContactsTable/ContactsTable'
 import SendEmailModal from '../components/SendEmailModal/SendEmailModal'
 import type { SortState } from '../components/Table/Table'
-import { syncGmail } from '../lib/gmail/sync'
+import { syncGmail, rescanContact } from '../lib/gmail/sync'
 import styles from './Contacts.module.css'
 
 const GMAIL_SYNC_INTERVAL_MS = 60_000
@@ -388,6 +388,20 @@ export default function Contacts() {
     })))
     if (newContactId === id) setNewContactId(null)
     await supabase.from('contacts').update({ [field]: value }).eq('id', id)
+    // If the email field changed (and is non-empty), rescan Gmail for any
+    // pre-existing outreach to this address so it appears on the Threads
+    // Board. Best-effort, runs in the background.
+    if (field === 'email' && value) {
+      const refreshed = await supabase.from('contacts').select('*').eq('id', id).maybeSingle()
+      const contact = refreshed.data as Contact | null
+      if (contact) {
+        const added = await rescanContact(contact)
+        if (added > 0) {
+          const { data: threadData } = await supabase.from('email_threads').select('*')
+          if (threadData) setThreadsByContactId(buildThreadMap(threadData as EmailThread[]))
+        }
+      }
+    }
   }
 
   const addContact = async (companyId: string) => {
