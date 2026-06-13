@@ -3,7 +3,7 @@
 }
 
 .header {
-  margin-bottom: var(--spacing-10);
+  margin-bottom: var(--spacing-5);
 }
 
 .title {
@@ -14,8 +14,50 @@
   margin-bottom: var(--spacing-2);
 }
 
-.subtitle {
-  font-size: var(--font-size-base);
+.stats {
+  margin-bottom: var(--spacing-8);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+}
+
+.statCard {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4) var(--spacing-5);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.statLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-1);
+}
+
+.statCount {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+}
+
+.statCountAction {
+  color: #d97706;
+}
+
+.statCountClear {
+  color: #16a34a;
+}
+
+.statMotivation {
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 

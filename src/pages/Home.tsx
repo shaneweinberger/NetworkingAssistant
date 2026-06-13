@@ -12,7 +12,7 @@ import styles from './Home.module.css'
 
 const GMAIL_SYNC_INTERVAL_MS = 30_000
 
-const EMPTY_BOARD: BoardData = { sent: [], follow_up: [], reply: [] }
+const EMPTY_BOARD: BoardData = { sent: [], follow_up: [], reply: [], reengage: [] }
 
 export default function Home() {
   const [rules, setRules] = useState<ThreadRules>(DEFAULT_RULES)
@@ -112,12 +112,47 @@ export default function Home() {
     setGmailConnected(Boolean(creds?.access_token))
   }
 
+  const actionCount = board.reply.length + board.follow_up.length + board.reengage.length
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Home</h1>
-        <p className={styles.subtitle}>Welcome to your networking assistant.</p>
       </header>
+
+      <div className={styles.stats}>
+        <div className={styles.statGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Awaiting Reply</div>
+            <div className={`${styles.statCount} ${!loading && board.reply.length > 0 ? styles.statCountAction : !loading ? styles.statCountClear : ''}`}>
+              {loading ? '—' : board.reply.length}
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Follow-Up Due</div>
+            <div className={`${styles.statCount} ${!loading && board.follow_up.length > 0 ? styles.statCountAction : !loading ? styles.statCountClear : ''}`}>
+              {loading ? '—' : board.follow_up.length}
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Re-Engage</div>
+            <div className={`${styles.statCount} ${!loading && board.reengage.length > 0 ? styles.statCountAction : !loading ? styles.statCountClear : ''}`}>
+              {loading ? '—' : board.reengage.length}
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statLabel}>Sent</div>
+            <div className={styles.statCount}>{loading ? '—' : board.sent.length}</div>
+          </div>
+        </div>
+        {!loading && (
+          <p className={styles.statMotivation}>
+            {actionCount > 0
+              ? `${actionCount} conversation${actionCount === 1 ? '' : 's'} need your attention — let's get that to zero.`
+              : `You're all caught up — keep the momentum going!`}
+          </p>
+        )}
+      </div>
 
       {gmailReconnectRequired && (
         <div className={styles.reconnectBanner}>
