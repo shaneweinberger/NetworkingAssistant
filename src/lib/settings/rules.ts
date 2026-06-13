@@ -4,7 +4,7 @@ import type { AppSettings } from '../../types/database'
 // Defaults match the values the status engine used historically, so behavior
 // is unchanged if the app_settings row hasn't been seeded yet.
 export const DEFAULT_FOLLOW_UP_AFTER_DAYS = 5
-export const DEFAULT_REENGAGE_AFTER_DAYS = 14
+export const DEFAULT_REENGAGE_AFTER_DAYS = 60
 
 export interface ThreadRules {
   followUpAfterDays: number

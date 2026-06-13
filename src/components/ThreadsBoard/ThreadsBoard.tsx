@@ -19,9 +19,10 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'reply',      label: 'Awaiting Reply',  emptyText: 'Nothing to reply to', ctaLabel: 'Reply' },
-  { key: 'follow_up',  label: 'Follow-Up Due',   emptyText: 'No follow-ups due',   ctaLabel: 'Follow up' },
-  { key: 'sent',       label: 'Sent',            emptyText: 'No active outreach',  ctaLabel: null },
+  { key: 'reply',      label: 'Awaiting Reply',  emptyText: 'Nothing to reply to',    ctaLabel: 'Reply' },
+  { key: 'follow_up',  label: 'Follow-Up Due',   emptyText: 'No follow-ups due',       ctaLabel: 'Follow up' },
+  { key: 'sent',       label: 'Sent',            emptyText: 'No active outreach',      ctaLabel: null },
+  { key: 'reengage',   label: 'Re-Engage',       emptyText: 'No re-engagements needed', ctaLabel: 'Re-engage' },
 ]
 
 export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRules, onCardClick }: Props) {
@@ -29,16 +30,24 @@ export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRule
     sent: data.sent.length,
     follow_up: data.follow_up.length,
     reply: data.reply.length,
+    reengage: data.reengage.length,
   }), [data])
 
-  const [collapsed, setCollapsed] = useState<Record<BoardColumnKey, boolean>>({
-    reply: false,
-    follow_up: false,
-    sent: false,
+  const [collapsed, setCollapsed] = useState<Record<BoardColumnKey, boolean>>(() => {
+    const defaults = { reply: false, follow_up: false, sent: false, reengage: false }
+    try {
+      const saved = localStorage.getItem('threads-board-collapsed')
+      if (saved) return { ...defaults, ...JSON.parse(saved) }
+    } catch {}
+    return defaults
   })
 
   const toggle = (key: BoardColumnKey) =>
-    setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
+    setCollapsed(prev => {
+      const next = { ...prev, [key]: !prev[key] }
+      try { localStorage.setItem('threads-board-collapsed', JSON.stringify(next)) } catch {}
+      return next
+    })
 
   return (
     <section className={styles.board}>
@@ -108,7 +117,6 @@ export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRule
                     <ThreadCard
                       key={card.thread.id}
                       card={card}
-                      ctaLabel={col.ctaLabel}
                       onClick={() => onCardClick(card)}
                     />
                   ))}
@@ -124,34 +132,30 @@ export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRule
 
 interface ThreadCardProps {
   card: BoardCard
-  ctaLabel: string | null
   onClick: () => void
 }
 
-function ThreadCard({ card, ctaLabel, onClick }: ThreadCardProps) {
+function ThreadCard({ card, onClick }: ThreadCardProps) {
   const subject = card.thread.subject?.trim() || '(no subject)'
   const showOutreachTag = card.outreachAttempt != null
   return (
     <button type="button" className={styles.card} onClick={onClick}>
       <div className={styles.cardTop}>
         <span className={styles.cardName}>{card.contact.name || 'Unknown contact'}</span>
-        {showOutreachTag && (
-          <span className={styles.outreachTag}>{outreachLabel(card.outreachAttempt!)}</span>
-        )}
-        {card.isReengage && !showOutreachTag && (
-          <span className={styles.reengageTag}>Re-engage</span>
-        )}
-      </div>
-      <div className={styles.cardMeta}>
-        {card.company?.name && <span className={styles.cardCompany}>{card.company.name}</span>}
-        {card.contact.role && card.company?.name && <span className={styles.cardMetaDot}>·</span>}
-        {card.contact.role && <span className={styles.cardRole}>{card.contact.role}</span>}
-      </div>
-      <div className={styles.cardSubject} title={subject}>{subject}</div>
-      <div className={styles.cardFooter}>
         <span className={styles.cardDate}>{relativeTime(card.sortAt)}</span>
-        {ctaLabel && <span className={styles.cardCta}>{ctaLabel} →</span>}
       </div>
+      {card.company?.name && (
+        <div className={styles.cardCompanyRow}>
+          <span className={styles.cardCompany}>{card.company.name}</span>
+          {showOutreachTag && (
+            <span className={styles.outreachTag}>{outreachLabel(card.outreachAttempt!)}</span>
+          )}
+        </div>
+      )}
+      {card.contact.role && (
+        <span className={styles.cardRole}>{card.contact.role}</span>
+      )}
+      <div className={styles.cardSubject} title={subject}>{subject}</div>
     </button>
   )
 }

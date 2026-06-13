@@ -3,7 +3,7 @@ import type { Contact, EmailThread, EmailEvent, Company } from '../../types/data
 import { deriveAction, type ActionKind } from '../status/engine'
 import type { ThreadRules } from '../settings/rules'
 
-export type BoardColumnKey = 'sent' | 'follow_up' | 'reply'
+export type BoardColumnKey = 'sent' | 'follow_up' | 'reply' | 'reengage'
 
 export interface BoardCard {
   thread: EmailThread
@@ -27,13 +27,14 @@ export interface BoardData {
   sent: BoardCard[]
   follow_up: BoardCard[]
   reply: BoardCard[]
+  reengage: BoardCard[]
 }
 
 function bucketForAction(kind: ActionKind): BoardColumnKey | null {
   switch (kind) {
     case 'reply': return 'reply'
     case 'send_follow_up': return 'follow_up'
-    case 'reengage': return 'follow_up'
+    case 'reengage': return 'reengage'
     case 'wait': return 'sent'
     case 'send_first':
     case 'none':
@@ -92,7 +93,7 @@ export async function loadBoardData(rules: ThreadRules, now: number = Date.now()
   const companiesById = new Map(companies.map(c => [c.id, c]))
   const outreachByThread = computeOutreachAttempts(events)
 
-  const board: BoardData = { sent: [], follow_up: [], reply: [] }
+  const board: BoardData = { sent: [], follow_up: [], reply: [], reengage: [] }
 
   for (const thread of threadList) {
     if (thread.closed_at) continue
@@ -122,10 +123,11 @@ export async function loadBoardData(rules: ThreadRules, now: number = Date.now()
     })
   }
 
-  // Sort: Reply + Follow-up = oldest first (most overdue at top).
+  // Sort: Reply + Follow-up + Re-engage = oldest first (most overdue at top).
   // Sent = newest first (fresh activity at top).
   board.reply.sort((a, b) => (a.sortAt ?? '').localeCompare(b.sortAt ?? ''))
   board.follow_up.sort((a, b) => (a.sortAt ?? '').localeCompare(b.sortAt ?? ''))
+  board.reengage.sort((a, b) => (a.sortAt ?? '').localeCompare(b.sortAt ?? ''))
   board.sent.sort((a, b) => (b.sortAt ?? '').localeCompare(a.sortAt ?? ''))
 
   return board

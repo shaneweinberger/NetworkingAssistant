@@ -112,6 +112,9 @@ export function deriveAction(
   const lastRecv = thread.last_received_at ? new Date(thread.last_received_at).getTime() : null
 
   if (lastRecv && (!lastSent || lastRecv > lastSent)) {
+    if (daysBetween(lastRecv, now) >= rules.reengageAfterDays) {
+      return { kind: 'reengage', label: 'Re-engage', tone: 'orange' }
+    }
     return { kind: 'reply', label: 'Reply to message', tone: 'green' }
   }
 

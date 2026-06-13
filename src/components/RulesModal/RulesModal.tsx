@@ -49,7 +49,7 @@ export default function RulesModal({ rules, onClose, onSaved }: Props) {
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <h2 className={styles.title}>Rules</h2>
         <p className={styles.subtitle}>
-          Configure when an email moves between the Sent, Follow-up, and Reply columns.
+          Configure when an email moves between the Sent, Follow-Up, Reply, and Re-Engage columns.
         </p>
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
@@ -71,7 +71,7 @@ export default function RulesModal({ rules, onClose, onSaved }: Props) {
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="rules-reengage">
-              Mark as Re-engage after
+              Move to Re-Engage after
             </label>
             <div className={styles.inputRow}>
               <input
