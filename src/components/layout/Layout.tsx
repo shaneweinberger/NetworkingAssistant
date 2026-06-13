@@ -63,9 +63,18 @@ const SettingsIcon = () => (
   </svg>
 )
 
+const GameplanIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.25" />
+    <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.25" />
+    <path d="M8 2.5V5.5M8 10.5V13.5M2.5 8H5.5M10.5 8H13.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+  </svg>
+)
+
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', path: '/home', icon: <HomeIcon /> },
   { label: 'Contacts', path: '/contacts', icon: <ListIcon /> },
+  { label: 'SF Gameplan', path: '/sf-gameplan', icon: <GameplanIcon /> },
   { label: 'Ivey Alumni', path: '/alumni', icon: <AlumniIcon /> },
   { label: 'Templates', path: '/templates', icon: <TemplatesIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },

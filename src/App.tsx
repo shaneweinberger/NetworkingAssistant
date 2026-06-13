@@ -6,6 +6,7 @@ import IveyAlumni from './pages/IveyAlumni'
 import Templates from './pages/Templates'
 import Settings from './pages/Settings'
 import GmailCallback from './pages/GmailCallback'
+import SFGameplan from './pages/SFGameplan'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/alumni" element={<IveyAlumni />} />
         <Route path="/templates" element={<Templates />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/sf-gameplan" element={<SFGameplan />} />
       </Route>
     </Routes>
   )
