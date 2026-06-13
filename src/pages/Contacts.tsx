@@ -410,7 +410,7 @@ export default function Contacts() {
       name: '',
       role: null,
       email: null,
-      status: 'Sent',
+      status: null,
       location: null,
       education: null,
       linkedin: null,

@@ -162,7 +162,7 @@ function renderCell(
   // user always sees what to do next.
   if (col.key === 'status') {
     const showDerivedStatus = derived.status.kind !== 'not_contacted'
-    const showAction = derived.action.kind !== 'wait' && derived.action.kind !== 'none'
+    const showAction = derived.action.kind !== 'wait' && derived.action.kind !== 'none' && derived.action.kind !== 'send_first'
 
     if (showDerivedStatus) {
       // Both status + action stacked, with our own padding (no inner controls)
