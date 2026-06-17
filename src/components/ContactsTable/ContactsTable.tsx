@@ -9,7 +9,7 @@ import LinkedInCell from './LinkedInCell'
 import styles from './ContactsTable.module.css'
 
 export type ContactColKey =
-  | 'name' | 'role' | 'status' | 'location' | 'education' | 'linkedin' | 'email'
+  | 'name' | 'company' | 'role' | 'role_category' | 'status' | 'location' | 'education' | 'linkedin' | 'email'
 
 export type ColumnType = 'text' | 'dropdown'
 
@@ -20,11 +20,15 @@ export type ContactColumnConfig = Column<ContactColKey> & {
 }
 
 /** Columns whose type can be toggled between text/dropdown in the settings modal. */
-export const TYPE_TOGGLEABLE: ContactColKey[] = ['role', 'status', 'location', 'education']
+export const TYPE_TOGGLEABLE: ContactColKey[] = ['role', 'role_category', 'status', 'location', 'education']
 
 export const DEFAULT_CONTACT_COLUMNS: ContactColumnConfig[] = [
   { key: 'name',      label: 'Name',      width: 200, sortable: true, filterable: true, type: 'text', options: [], visible: true },
   { key: 'role',      label: 'Role',      width: 160, sortable: true, filterable: true, type: 'text', options: [], visible: true },
+  { key: 'role_category', label: 'Role Bucket', width: 150, sortable: true, filterable: true, type: 'dropdown', options: [
+    { value: 'Product Manager', color: 'blue' },
+    { value: 'Software Engineer', color: 'purple' },
+  ], visible: false },
   { key: 'status',    label: 'Status',    width: 180, sortable: true, filterable: true, type: 'dropdown', options: [
     { value: 'Sent', color: 'gray' },
     { value: 'Replied', color: 'green' },
@@ -46,22 +50,50 @@ interface Props {
   onFilterChange: (key: ContactColKey, value: string) => void
   onUpdate: (id: string, field: keyof Contact, value: string | null) => void
   onDelete: (contact: Contact) => void
-  onAdd: () => void
+  onAdd?: () => void
   onSendEmail: (contact: Contact) => void
   threadsByContactId: Record<string, EmailThread>
   newContactId: string | null
+  /** When set, shows each contact's company next to its name (used by the "By Role" view, where rows span companies). */
+  companyByContactId?: Record<string, string>
 }
 
 export default function ContactsTable({
   contacts, columns, onColumnsChange,
   sort, onSortChange, filters, onFilterChange,
-  onUpdate, onDelete, onAdd, onSendEmail, threadsByContactId, newContactId,
+  onUpdate, onDelete, onAdd, onSendEmail, threadsByContactId, newContactId, companyByContactId,
 }: Props) {
   const visibleColumns = columns.filter(c => c.visible)
   const hiddenColumns = columns.filter(c => !c.visible)
 
   const handleVisibleColumnsChange = (newVisible: Column<ContactColKey>[]) => {
     onColumnsChange([...(newVisible as ContactColumnConfig[]), ...hiddenColumns])
+  }
+
+  // Role Bucket stays out of the way on the By Company view by default —
+  // this toggle next to the Role header reveals/hides it without going
+  // through the full Column Settings modal. (Not shown in the By Role view,
+  // which already excludes role_category from its column set entirely.)
+  const roleBucketColumn = columns.find(c => c.key === 'role_category')
+  const renderHeaderExtra = (col: Column<ContactColKey>) => {
+    if (col.key !== 'role' || !roleBucketColumn) return null
+    return (
+      <button
+        type="button"
+        className={`${styles.roleBucketToggle} ${roleBucketColumn.visible ? styles.roleBucketToggleActive : ''}`}
+        aria-label={roleBucketColumn.visible ? 'Hide Role Bucket column' : 'Show Role Bucket column'}
+        aria-pressed={roleBucketColumn.visible}
+        onMouseDown={e => e.stopPropagation()}
+        onClick={e => {
+          e.stopPropagation()
+          onColumnsChange(columns.map(c => c.key === 'role_category' ? { ...c, visible: !c.visible } : c))
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+          <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    )
   }
 
   return (
@@ -74,6 +106,7 @@ export default function ContactsTable({
         filters={filters}
         onFilterChange={onFilterChange}
         trailingWidth={72}
+        renderHeaderExtra={renderHeaderExtra}
       >
         <tbody>
           {contacts.length === 0 && (
@@ -90,7 +123,7 @@ export default function ContactsTable({
               <tr key={contact.id} className={styles.row}>
                 {visibleColumns.map(col => (
                   <td key={col.key} className={styles.cell}>
-                    {renderCell(col, contact, onUpdate, contact.id === newContactId && col.key === 'name', derived)}
+                    {renderCell(col, contact, onUpdate, contact.id === newContactId && col.key === 'name', derived, companyByContactId?.[contact.id])}
                   </td>
                 ))}
                 <td className={styles.spacerCell} aria-hidden />
@@ -137,11 +170,13 @@ export default function ContactsTable({
           })}
         </tbody>
       </Table>
-      <div className={styles.footer}>
-        <button type="button" className={styles.addButton} onClick={onAdd}>
-          + Add contact
-        </button>
-      </div>
+      {onAdd && (
+        <div className={styles.footer}>
+          <button type="button" className={styles.addButton} onClick={onAdd}>
+            + Add contact
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -152,7 +187,14 @@ function renderCell(
   onUpdate: (id: string, field: keyof Contact, value: string | null) => void,
   autoFocus: boolean,
   derived: ReturnType<typeof deriveForThread>,
+  companyName?: string,
 ) {
+  // "Company" is synthetic — injected only by the By Role view, since it
+  // isn't a real Contact field (it comes from the joined company row).
+  if (col.key === 'company') {
+    return <span className={styles.companyCellText}>{companyName ?? ''}</span>
+  }
+
   const raw = contact[col.key]
   const value = typeof raw === 'string' ? raw : ''
 
@@ -197,22 +239,32 @@ function renderCell(
   }
   if (col.key === 'name') {
     return (
-      <TextCell
-        value={value}
-        placeholder={col.label}
-        autoFocus={autoFocus}
-        bold
-        onCommit={v => onUpdate(contact.id, 'name', v)}
-      />
+      <div className={styles.nameCell}>
+        <TextCell
+          value={value}
+          placeholder={col.label}
+          autoFocus={autoFocus}
+          bold
+          onCommit={v => onUpdate(contact.id, 'name', v)}
+        />
+        {!contact.email && (
+          <span className={styles.noEmailDot} title="No email on file" aria-label="No email on file" />
+        )}
+      </div>
     )
   }
+
+  // The "company" branch above always returns, so every remaining key here
+  // is a real Contact field — TS just can't see that across the early
+  // returns above, hence the cast.
+  const field = col.key as keyof Contact
 
   if (col.type === 'dropdown') {
     return (
       <DropdownCell
         value={value}
         options={col.options}
-        onChange={v => onUpdate(contact.id, col.key, v || null)}
+        onChange={v => onUpdate(contact.id, field, v || null)}
       />
     )
   }
@@ -222,7 +274,7 @@ function renderCell(
       value={value}
       placeholder={col.label}
       muted
-      onCommit={v => onUpdate(contact.id, col.key, v || null)}
+      onCommit={v => onUpdate(contact.id, field, v || null)}
     />
   )
 }

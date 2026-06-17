@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Company, Contact, CompanyWithContacts, EmailThread } from '../types/database'
 import AddCompanyModal from '../components/AddCompanyModal'
+import AddRoleCategoryModal from '../components/AddRoleCategoryModal'
 import DeleteContactModal from '../components/DeleteContactModal'
 import DeleteCompanyModal from '../components/DeleteCompanyModal/DeleteCompanyModal'
+import DeleteRoleCategoryModal from '../components/DeleteRoleCategoryModal'
 import ColumnSettingsModal from '../components/ColumnSettingsModal/ColumnSettingsModal'
+import { COLOR_NAMES, type ColorName } from '../lib/colors'
 import CategoryTabs, { type CategoryFilter } from '../components/CategoryTabs/CategoryTabs'
 import CategoryPicker from '../components/CategoryPicker/CategoryPicker'
 import ContactsTable, {
@@ -21,6 +24,25 @@ const GMAIL_SYNC_INTERVAL_MS = 60_000
 
 const COMPANY_ORDER_STORAGE_KEY = 'contacts:company-order'
 const CATEGORY_FILTER_STORAGE_KEY = 'contacts:category-filter'
+const VIEW_MODE_STORAGE_KEY = 'contacts:view-mode'
+
+type ViewMode = 'company' | 'role'
+
+function loadViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_MODE_STORAGE_KEY) === 'role' ? 'role' : 'company'
+  } catch {
+    return 'company'
+  }
+}
+
+function saveViewMode(mode: ViewMode) {
+  try {
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
+  } catch {
+    // ignore
+  }
+}
 
 function loadCategoryFilter(): CategoryFilter {
   try {
@@ -108,6 +130,23 @@ function buildThreadMap(threads: EmailThread[]): Record<string, EmailThread> {
   return map
 }
 
+/**
+ * The By Role view shows contacts across companies, so it swaps in a
+ * synthetic "Company" column right after Name and hides Role Bucket (the
+ * group itself already says which bucket you're looking at). This is a
+ * display-only transform — it never gets persisted back to column configs.
+ */
+function buildRoleViewColumns(cols: ContactColumnConfig[]): ContactColumnConfig[] {
+  const withoutBucket = cols.filter(c => c.key !== 'role_category')
+  const nameIdx = withoutBucket.findIndex(c => c.key === 'name')
+  const companyCol: ContactColumnConfig = {
+    key: 'company', label: 'Company', width: 140, sortable: true, filterable: true, type: 'text', options: [], visible: true,
+  }
+  const next = [...withoutBucket]
+  next.splice(nameIdx + 1, 0, companyCol)
+  return next
+}
+
 function configToRow(config: ContactColumnConfig, position: number): ColumnConfigRow {
   return {
     column_key: config.key,
@@ -134,14 +173,33 @@ export default function Contacts() {
   const [sort, setSort] = useState<SortState<ContactColKey>>(null)
   const [filters, setFilters] = useState<Partial<Record<ContactColKey, string>>>({})
 
+  // Column layout for the By Role table only — derived from `columns` but
+  // never persisted, so resizing/reordering here doesn't touch the saved
+  // (By Company) column config. Resynced (during render, not an effect —
+  // see https://react.dev/learn/you-might-not-need-an-effect) whenever the
+  // saved columns change.
+  const [roleViewColumns, setRoleViewColumns] = useState<ContactColumnConfig[]>(() => buildRoleViewColumns(DEFAULT_CONTACT_COLUMNS))
+  const [roleViewColumnsSource, setRoleViewColumnsSource] = useState(columns)
+  if (columns !== roleViewColumnsSource) {
+    setRoleViewColumnsSource(columns)
+    setRoleViewColumns(buildRoleViewColumns(columns))
+  }
+
   const [deleteContactTarget, setDeleteContactTarget] = useState<Contact | null>(null)
   const [deleteCompanyTarget, setDeleteCompanyTarget] = useState<Company | null>(null)
   const [newContactId, setNewContactId] = useState<string | null>(null)
+
+  const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set())
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false)
+  const [deleteRoleTarget, setDeleteRoleTarget] = useState<string | null>(null)
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(loadCategoryFilter)
   const [categoryPickerFor, setCategoryPickerFor] = useState<
     { companyId: string; anchor: HTMLElement } | null
   >(null)
+
+  const [searchQuery, setSearchQuery] = useState('')
 
   const [threadsByContactId, setThreadsByContactId] = useState<Record<string, EmailThread>>({})
   const [sendEmailFor, setSendEmailFor] = useState<{ contact: Contact; company: { name: string } } | null>(null)
@@ -160,7 +218,7 @@ export default function Contacts() {
         supabase
           .from('companies')
           .select(`id, name, website, category, starred, created_at,
-            contacts ( id, name, role, email, last_contact, status, location, education, linkedin, notes, created_at, company_id )`)
+            contacts ( id, name, role, role_category, email, last_contact, status, location, education, linkedin, notes, created_at, company_id )`)
           .order('name'),
         supabase
           .from('contact_column_configs')
@@ -354,6 +412,77 @@ export default function Contacts() {
     saveCategoryFilter(filter)
   }
 
+  const changeViewMode = (mode: ViewMode) => {
+    setViewMode(mode)
+    saveViewMode(mode)
+  }
+
+  const toggleRole = (name: string) => setExpandedRoles(prev => {
+    const next = new Set(prev)
+    next.has(name) ? next.delete(name) : next.add(name)
+    return next
+  })
+
+  const UNASSIGNED_ROLE_BUCKET = 'Unassigned'
+
+  type RoleGroup = {
+    name: string
+    contacts: Contact[]
+  }
+
+  const companyNameByContactId = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const company of companies) {
+      for (const contact of company.contacts) map[contact.id] = company.name
+    }
+    return map
+  }, [companies])
+
+  const trimmedSearch = searchQuery.trim().toLowerCase()
+
+  // A company "matches" the search if its own name does, or if any of its
+  // contacts' names do — so searching a person's name surfaces the company
+  // they're filed under, even in the By Company view.
+  const companyMatchesSearch = (company: CompanyWithContacts): boolean => {
+    if (!trimmedSearch) return true
+    if (company.name.toLowerCase().includes(trimmedSearch)) return true
+    return company.contacts.some(c => c.name.toLowerCase().includes(trimmedSearch))
+  }
+
+  // When a company matched by its own name, show all of its contacts;
+  // when it only matched via a contact's name, narrow down to just those.
+  const contactsForSearch = (company: CompanyWithContacts): Contact[] => {
+    if (!trimmedSearch || company.name.toLowerCase().includes(trimmedSearch)) return company.contacts
+    return company.contacts.filter(c => c.name.toLowerCase().includes(trimmedSearch))
+  }
+
+  const roleGroups = useMemo<RoleGroup[]>(() => {
+    // Pinned buckets come from the "Role Bucket" column's dropdown options
+    // (edit them in Column Settings) so they always show up here, even
+    // before any contact has been assigned to them.
+    const pinnedBuckets = columns.find(c => c.key === 'role_category')?.options.map(o => o.value) ?? []
+    const byBucket = new Map<string, Contact[]>()
+    for (const name of pinnedBuckets) byBucket.set(name, [])
+    for (const company of companies) {
+      for (const contact of company.contacts) {
+        const bucket = contact.role_category?.trim() || UNASSIGNED_ROLE_BUCKET
+        if (!byBucket.has(bucket)) byBucket.set(bucket, [])
+        byBucket.get(bucket)!.push(contact)
+      }
+    }
+    const pinnedOrder = new Map(pinnedBuckets.map((name, i) => [name, i]))
+    return Array.from(byBucket.entries())
+      .map(([name, contacts]) => ({ name, contacts }))
+      .sort((a, b) => {
+        if (a.name === UNASSIGNED_ROLE_BUCKET) return 1
+        if (b.name === UNASSIGNED_ROLE_BUCKET) return -1
+        const ai = pinnedOrder.get(a.name) ?? Infinity
+        const bi = pinnedOrder.get(b.name) ?? Infinity
+        if (ai !== bi) return ai - bi
+        return a.name.localeCompare(b.name)
+      })
+  }, [companies, columns])
+
   const allCategories = useMemo(() => {
     const set = new Set<string>()
     for (const c of companies) {
@@ -373,10 +502,21 @@ export default function Contacts() {
   }, [companies])
 
   const filteredCompanies = useMemo(() => {
-    if (categoryFilter.type === 'all') return companies
-    if (categoryFilter.type === 'starred') return companies.filter(c => c.starred)
-    return companies.filter(c => c.category === categoryFilter.name)
-  }, [companies, categoryFilter])
+    let result = companies
+    if (categoryFilter.type === 'starred') result = result.filter(c => c.starred)
+    else if (categoryFilter.type === 'category') result = result.filter(c => c.category === categoryFilter.name)
+    if (trimmedSearch) result = result.filter(companyMatchesSearch)
+    return result
+  }, [companies, categoryFilter, trimmedSearch])
+
+  // Search-filtered role groups: a contact stays in its group only if its
+  // name matches, and a group with no matches drops out entirely.
+  const filteredRoleGroups = useMemo<RoleGroup[]>(() => {
+    if (!trimmedSearch) return roleGroups
+    return roleGroups
+      .map(g => ({ name: g.name, contacts: g.contacts.filter(c => c.name.toLowerCase().includes(trimmedSearch)) }))
+      .filter(g => g.contacts.length > 0)
+  }, [roleGroups, trimmedSearch])
 
   const newCompanyDefaultCategory =
     categoryFilter.type === 'category' ? categoryFilter.name : null
@@ -404,11 +544,12 @@ export default function Contacts() {
     }
   }
 
-  const addContact = async (companyId: string) => {
+  const addContact = async (companyId: string, defaultRoleCategory: string | null = null) => {
     const { data, error } = await supabase.from('contacts').insert({
       company_id: companyId,
       name: '',
       role: null,
+      role_category: defaultRoleCategory,
       email: null,
       status: null,
       location: null,
@@ -457,6 +598,35 @@ export default function Contacts() {
     }
   }
 
+  // Role categories aren't a separate table — they're just the dropdown
+  // options on the "role_category" column config, so adding/removing one is
+  // an options-array edit (same mechanism as the Columns settings modal).
+  const addRoleCategory = (name: string) => {
+    const roleCategoryCol = columns.find(c => c.key === 'role_category')
+    if (!roleCategoryCol) return
+    const usedColors = roleCategoryCol.options.map(o => o.color)
+    const nextColor = (COLOR_NAMES.find(c => !usedColors.includes(c)) ?? 'gray') as ColorName
+    const nextOptions = [...roleCategoryCol.options, { value: name, color: nextColor }]
+    handleColumnsConfigChange(columns.map(c => (c.key === 'role_category' ? { ...c, options: nextOptions } : c)))
+    setShowAddRoleModal(false)
+  }
+
+  const confirmDeleteRoleCategory = async () => {
+    if (!deleteRoleTarget) return
+    const name = deleteRoleTarget
+    setCompanies(prev => prev.map(c => ({
+      ...c,
+      contacts: c.contacts.map(ct => (ct.role_category === name ? { ...ct, role_category: null } : ct)),
+    })))
+    const roleCategoryCol = columns.find(c => c.key === 'role_category')
+    if (roleCategoryCol) {
+      const nextOptions = roleCategoryCol.options.filter(o => o.value !== name)
+      handleColumnsConfigChange(columns.map(c => (c.key === 'role_category' ? { ...c, options: nextOptions } : c)))
+    }
+    setDeleteRoleTarget(null)
+    await supabase.from('contacts').update({ role_category: null }).eq('role_category', name)
+  }
+
   const handleFilterChange = (key: ContactColKey, value: string) => {
     setFilters(prev => {
       const next = { ...prev }
@@ -466,17 +636,25 @@ export default function Contacts() {
     })
   }
 
+  // "company" isn't a real Contact field — it's synthetic, injected only by
+  // the By Role view's column set, so filter/sort read it from the
+  // company-name lookup instead of the contact object.
+  const fieldValue = (contact: Contact, key: ContactColKey): string => {
+    if (key === 'company') return companyNameByContactId[contact.id] ?? ''
+    return String((contact as unknown as Record<string, unknown>)[key] ?? '')
+  }
+
   const visibleContacts = (contacts: Contact[]) => {
     let result = contacts
     for (const k of Object.keys(filters) as ContactColKey[]) {
       const v = filters[k]?.toLowerCase()
       if (!v) continue
-      result = result.filter(c => String((c as unknown as Record<string, unknown>)[k] ?? '').toLowerCase().includes(v))
+      result = result.filter(c => fieldValue(c, k).toLowerCase().includes(v))
     }
     if (sort) {
       result = [...result].sort((a, b) => {
-        const av = String((a as unknown as Record<string, unknown>)[sort.key] ?? '').toLowerCase()
-        const bv = String((b as unknown as Record<string, unknown>)[sort.key] ?? '').toLowerCase()
+        const av = fieldValue(a, sort.key).toLowerCase()
+        const bv = fieldValue(b, sort.key).toLowerCase()
         return sort.dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
       })
     }
@@ -491,6 +669,31 @@ export default function Contacts() {
           <p className={styles.subtitle}>Manage your contacts and connections.</p>
         </div>
         <div className={styles.headerActions}>
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder={viewMode === 'company' ? 'Search companies or contacts…' : 'Search contacts…'}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          <div className={styles.viewToggle} role="tablist" aria-label="Group contacts by">
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === 'company' ? styles.viewToggleBtnActive : ''}`}
+              aria-pressed={viewMode === 'company'}
+              onClick={() => changeViewMode('company')}
+            >
+              By Company
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === 'role' ? styles.viewToggleBtnActive : ''}`}
+              aria-pressed={viewMode === 'role'}
+              onClick={() => changeViewMode('role')}
+            >
+              By Role
+            </button>
+          </div>
           <button
             className={styles.secondaryButton}
             type="button"
@@ -498,16 +701,115 @@ export default function Contacts() {
           >
             Columns
           </button>
-          <button className={styles.addButton} type="button" onClick={() => setShowCompanyModal(true)}>
-            Add Company
-          </button>
+          {viewMode === 'company' ? (
+            <button className={styles.addButton} type="button" onClick={() => setShowCompanyModal(true)}>
+              Add Company
+            </button>
+          ) : (
+            <button className={styles.addButton} type="button" onClick={() => setShowAddRoleModal(true)}>
+              Add Role
+            </button>
+          )}
         </div>
       </header>
 
       {loading && <p className={styles.stateText}>Loading…</p>}
       {error && <p className={styles.stateText}>Error: {error}</p>}
 
-      {!loading && !error && (
+      {!loading && !error && viewMode === 'role' && (
+        <div className={styles.companyList}>
+          {roleGroups.length === 0 && (
+            <p className={styles.stateText}>No contacts yet. Add a company and some contacts to get started.</p>
+          )}
+          {roleGroups.length > 0 && filteredRoleGroups.length === 0 && (
+            <p className={styles.stateText}>No contacts match “{searchQuery}”.</p>
+          )}
+          {filteredRoleGroups.map(group => {
+            const isOpen = trimmedSearch ? true : expandedRoles.has(group.name)
+            return (
+              <div key={group.name} className={styles.companyGroup}>
+                <div
+                  className={styles.companyHeader}
+                  onClick={() => toggleRole(group.name)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleRole(group.name) }}
+                >
+                  <div className={styles.companyHeaderLeft}>
+                    <span className={styles.companyName}>{group.name}</span>
+                  </div>
+                  <div className={styles.companyMeta}>
+                    <span className={styles.contactCount}>
+                      {group.contacts.length} {group.contacts.length === 1 ? 'contact' : 'contacts'}
+                    </span>
+                    {group.name !== UNASSIGNED_ROLE_BUCKET && (
+                      <button
+                        type="button"
+                        className={styles.companyDeleteBtn}
+                        aria-label={`Delete ${group.name}`}
+                        onClick={e => { e.stopPropagation(); setDeleteRoleTarget(group.name) }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 13 13" fill="none">
+                          <path
+                            d="M1.5 3h10M4.5 3V2a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1M3 3l.75 8h6.5L11 3"
+                            stroke="currentColor"
+                            strokeWidth="1.25"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                    <svg
+                      className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                    >
+                      <path
+                        d="M3 5l4 4 4-4"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className={styles.contactsWrapper}>
+                    {group.contacts.length === 0 ? (
+                      <p className={`${styles.stateText} ${styles.roleEmptyState}`}>
+                        No contacts in “{group.name}” yet. Set a contact’s Role Bucket to move it here.
+                      </p>
+                    ) : (
+                      <ContactsTable
+                        contacts={visibleContacts(group.contacts)}
+                        columns={roleViewColumns}
+                        onColumnsChange={setRoleViewColumns}
+                        sort={sort}
+                        onSortChange={setSort}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onUpdate={updateContact}
+                        onDelete={setDeleteContactTarget}
+                        onSendEmail={(ct) => setSendEmailFor({ contact: ct, company: { name: companyNameByContactId[ct.id] ?? '' } })}
+                        threadsByContactId={threadsByContactId}
+                        newContactId={newContactId}
+                        companyByContactId={companyNameByContactId}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {!loading && !error && viewMode === 'company' && (
         <>
           <CategoryTabs
             categories={allCategories}
@@ -521,17 +823,19 @@ export default function Contacts() {
             )}
             {companies.length > 0 && filteredCompanies.length === 0 && (
               <p className={styles.stateText}>
-                {categoryFilter.type === 'starred'
-                  ? 'No starred companies yet. Star a company to see it here.'
-                  : categoryFilter.type === 'category'
-                    ? `No companies in “${categoryFilter.name}” yet.`
-                    : 'No companies match.'}
+                {trimmedSearch
+                  ? `No companies or contacts match “${searchQuery}”.`
+                  : categoryFilter.type === 'starred'
+                    ? 'No starred companies yet. Star a company to see it here.'
+                    : categoryFilter.type === 'category'
+                      ? `No companies in “${categoryFilter.name}” yet.`
+                      : 'No companies match.'}
               </p>
             )}
 
             {filteredCompanies.map(group => {
               const index = companies.findIndex(c => c.id === group.id)
-            const isOpen = expanded.has(group.id)
+            const isOpen = trimmedSearch ? true : expanded.has(group.id)
             const ds = companyDrag
             const isDragging = ds?.from === index
             const isDropAbove =
@@ -631,7 +935,7 @@ export default function Contacts() {
                 {isOpen && (
                   <div className={styles.contactsWrapper}>
                     <ContactsTable
-                      contacts={visibleContacts(group.contacts)}
+                      contacts={visibleContacts(contactsForSearch(group))}
                       columns={columns}
                       onColumnsChange={handleColumnsChange}
                       sort={sort}
@@ -679,6 +983,21 @@ export default function Contacts() {
           columns={columns}
           onChange={handleColumnsConfigChange}
           onClose={() => setShowColumnSettings(false)}
+        />
+      )}
+      {showAddRoleModal && (
+        <AddRoleCategoryModal
+          existingNames={roleGroups.map(g => g.name).filter(n => n !== UNASSIGNED_ROLE_BUCKET)}
+          onClose={() => setShowAddRoleModal(false)}
+          onAdd={addRoleCategory}
+        />
+      )}
+      {deleteRoleTarget && (
+        <DeleteRoleCategoryModal
+          name={deleteRoleTarget}
+          contactCount={roleGroups.find(g => g.name === deleteRoleTarget)?.contacts.length ?? 0}
+          onClose={() => setDeleteRoleTarget(null)}
+          onConfirm={confirmDeleteRoleCategory}
         />
       )}
       {deleteContactTarget && (

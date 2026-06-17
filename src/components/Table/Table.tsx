@@ -20,6 +20,8 @@ interface Props<K extends string> {
   filters?: Partial<Record<K, string>>
   onFilterChange?: (key: K, value: string) => void
   trailingWidth?: number
+  /** Extra content rendered in a column's header, after the filter icon (e.g. a reveal-hidden-column toggle). */
+  renderHeaderExtra?: (col: Column<K>) => ReactNode
   children: ReactNode
 }
 
@@ -33,6 +35,7 @@ export default function Table<K extends string>({
   filters,
   onFilterChange,
   trailingWidth = 0,
+  renderHeaderExtra,
   children,
 }: Props<K>) {
   const tableRef = useRef<HTMLTableElement>(null)
@@ -195,6 +198,7 @@ export default function Table<K extends string>({
                         </svg>
                       </button>
                     )}
+                    {renderHeaderExtra?.(col)}
                   </div>
                   {showFilter && col.filterable && (
                     <input

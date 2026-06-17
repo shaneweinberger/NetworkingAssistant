@@ -12,6 +12,7 @@ export interface Contact {
   company_id: string
   name: string
   role: string | null
+  role_category: string | null
   email: string | null
   last_contact: string | null
   status: string

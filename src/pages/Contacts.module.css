@@ -67,6 +67,59 @@
   border-color: var(--color-border-strong);
 }
 
+.searchInput {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2) var(--spacing-3);
+  outline: none;
+  width: 240px;
+  transition: border-color 120ms ease;
+}
+
+.searchInput:focus {
+  border-color: var(--color-accent);
+}
+
+.viewToggle {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.viewToggleBtn {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg);
+  padding: var(--spacing-2) var(--spacing-4);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.viewToggleBtn + .viewToggleBtn {
+  border-left: 1px solid var(--color-border);
+}
+
+.viewToggleBtn:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.viewToggleBtnActive {
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.viewToggleBtnActive:hover {
+  background-color: var(--color-accent);
+}
+
 /* Company accordion list */
 
 .companyList {
@@ -229,6 +282,10 @@
 
 .contactsWrapper {
   border-top: 1px solid var(--color-border);
+}
+
+.roleEmptyState {
+  padding: var(--spacing-5);
 }
 
 .stateText {

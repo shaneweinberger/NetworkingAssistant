@@ -133,6 +133,68 @@
   color: var(--color-text-secondary);
 }
 
+.roleBucketToggle {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.roleBucketToggle svg {
+  transition: transform 150ms ease;
+}
+
+.roleBucketToggleActive svg {
+  transform: rotate(180deg);
+}
+
+.roleBucketToggle:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+}
+
+.roleBucketToggleActive {
+  color: var(--color-accent);
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+}
+
+.nameCell .cellInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.noEmailDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #e0807a;
+  margin-right: var(--spacing-3);
+  cursor: default;
+}
+
+.companyCellText {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px var(--spacing-3);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .linkedinCell {
   display: flex;
   align-items: center;

@@ -175,6 +175,7 @@ export default function IveyAlumni() {
       company_id: companyId!,
       name: alumnus.full_name,
       role: alumnus.job_title,
+      role_category: null,
       email: null,
       status: 'Sent',
       location: alumnus.location,
