@@ -48,6 +48,14 @@
   color: var(--color-text-primary);
 }
 
+.titleLink {
+  cursor: pointer;
+}
+
+.titleLink:hover {
+  text-decoration: underline;
+}
+
 .subtitle {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);

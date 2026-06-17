@@ -21,6 +21,10 @@ interface Props {
   replyToThread?: { threadId: string; gmailThreadId: string; subject: string | null } | null
 }
 
+function linkedInHref(url: string): string {
+  return url.startsWith('http') ? url : `https://${url}`
+}
+
 function parseSenderName(from: string | null): string {
   if (!from) return 'Unknown'
   const match = from.match(/^"?([^"<]+?)"?\s*</)
@@ -360,7 +364,19 @@ export default function SendEmailModal({ contact, company, onClose, onSent, onTh
         <header className={styles.header}>
           <div className={styles.headerLeft}>
             <span className={styles.title}>
-              {replyToThread ? 'Thread with' : 'Email'} {contact.name || 'contact'}
+              {replyToThread ? 'Thread with' : 'Email'}{' '}
+              {contact.linkedin ? (
+                <a
+                  href={linkedInHref(contact.linkedin)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.titleLink}
+                >
+                  {contact.name || 'contact'}
+                </a>
+              ) : (
+                contact.name || 'contact'
+              )}
             </span>
             <span className={styles.subtitle}>
               {company.name}{contact.role ? ` · ${contact.role}` : ''}
