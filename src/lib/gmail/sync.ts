@@ -8,6 +8,7 @@ interface ThreadDerivedTimes {
   last_message_at: string | null
   last_sent_at: string | null
   last_received_at: string | null
+  last_draft_at: string | null
   subject: string | null
   toAddresses: string[]
 }
@@ -30,13 +31,25 @@ async function deriveThreadTimes(gmailThreadId: string, ownEmail: string | null)
 
   let lastSent: number | null = null
   let lastReceived: number | null = null
+  let lastDraft: number | null = null
   let lastMessage: number | null = null
+  let messageCount = 0
   let subject: string | null = null
   const toAddresses = new Set<string>()
 
   for (const m of t.messages) {
     const ts = Number(m.internalDate)
     if (Number.isNaN(ts)) continue
+
+    // A draft carries the DRAFT label and its From header already matches the
+    // user's own address, even though it was never actually sent — track it
+    // separately so it doesn't get counted as a real message or as "sent".
+    if (m.labelIds.includes('DRAFT')) {
+      lastDraft = lastDraft == null ? ts : Math.max(lastDraft, ts)
+      continue
+    }
+
+    messageCount++
     if (subject == null && m.subject) subject = m.subject
     lastMessage = lastMessage == null ? ts : Math.max(lastMessage, ts)
 
@@ -51,10 +64,11 @@ async function deriveThreadTimes(gmailThreadId: string, ownEmail: string | null)
   }
 
   return {
-    message_count: t.messages.length,
+    message_count: messageCount,
     last_message_at: lastMessage != null ? new Date(lastMessage).toISOString() : null,
     last_sent_at: lastSent != null ? new Date(lastSent).toISOString() : null,
     last_received_at: lastReceived != null ? new Date(lastReceived).toISOString() : null,
+    last_draft_at: lastDraft != null ? new Date(lastDraft).toISOString() : null,
     subject,
     toAddresses: Array.from(toAddresses),
   }
@@ -76,6 +90,7 @@ export async function upsertThreadForContact(args: {
     last_message_at: times.last_message_at,
     last_sent_at: times.last_sent_at,
     last_received_at: times.last_received_at,
+    last_draft_at: times.last_draft_at,
     updated_at: new Date().toISOString(),
   }
 
@@ -158,6 +173,7 @@ async function discoverThread(
     last_message_at: times.last_message_at,
     last_sent_at: times.last_sent_at,
     last_received_at: times.last_received_at,
+    last_draft_at: times.last_draft_at,
     updated_at: new Date().toISOString(),
   }
   const { data, error } = await supabase

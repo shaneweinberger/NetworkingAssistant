@@ -9,6 +9,7 @@ export const REENGAGE_AFTER_DAYS = DEFAULT_RULES.reengageAfterDays
 
 export type StatusKind =
   | 'not_contacted'
+  | 'draft'
   | 'sent'
   | 'no_reply'
   | 'replied'
@@ -24,6 +25,7 @@ export interface DerivedStatus {
 export type ActionKind =
   | 'send_first'
   | 'send_follow_up'
+  | 'finish_draft'
   | 'reply'
   | 'reengage'
   | 'wait'
@@ -74,6 +76,11 @@ export function deriveStatus(
 
   const lastSent = thread.last_sent_at ? new Date(thread.last_sent_at).getTime() : null
   const lastRecv = thread.last_received_at ? new Date(thread.last_received_at).getTime() : null
+  const lastDraft = thread.last_draft_at ? new Date(thread.last_draft_at).getTime() : null
+
+  if (lastDraft && (!lastSent || lastDraft > lastSent) && (!lastRecv || lastDraft > lastRecv)) {
+    return { kind: 'draft', label: `Draft saved ${relativeTime(thread.last_draft_at, now)}`, tone: 'yellow' }
+  }
 
   if (lastRecv && (!lastSent || lastRecv > lastSent)) {
     return { kind: 'replied', label: `Responded ${relativeTime(thread.last_received_at, now)}`, tone: 'green' }
@@ -110,6 +117,11 @@ export function deriveAction(
 
   const lastSent = thread.last_sent_at ? new Date(thread.last_sent_at).getTime() : null
   const lastRecv = thread.last_received_at ? new Date(thread.last_received_at).getTime() : null
+  const lastDraft = thread.last_draft_at ? new Date(thread.last_draft_at).getTime() : null
+
+  if (lastDraft && (!lastSent || lastDraft > lastSent) && (!lastRecv || lastDraft > lastRecv)) {
+    return { kind: 'finish_draft', label: 'Finish draft', tone: 'yellow' }
+  }
 
   if (lastRecv && (!lastSent || lastRecv > lastSent)) {
     if (daysBetween(lastRecv, now) >= rules.reengageAfterDays) {

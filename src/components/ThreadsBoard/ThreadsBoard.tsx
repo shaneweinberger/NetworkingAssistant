@@ -22,11 +22,13 @@ const COLUMNS: ColumnDef[] = [
   { key: 'reply',      label: 'Awaiting Reply',  emptyText: 'Nothing to reply to',    ctaLabel: 'Reply' },
   { key: 'follow_up',  label: 'Follow-Up Due',   emptyText: 'No follow-ups due',       ctaLabel: 'Follow up' },
   { key: 'sent',       label: 'Sent',            emptyText: 'No active outreach',      ctaLabel: null },
+  { key: 'draft',      label: 'Drafts',          emptyText: 'No drafts waiting',       ctaLabel: 'Finish draft' },
   { key: 'reengage',   label: 'Re-Engage',       emptyText: 'No re-engagements needed', ctaLabel: 'Re-engage' },
 ]
 
 export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRules, onCardClick }: Props) {
   const counts = useMemo(() => ({
+    draft: data.draft.length,
     sent: data.sent.length,
     follow_up: data.follow_up.length,
     reply: data.reply.length,
@@ -34,7 +36,7 @@ export default function ThreadsBoard({ data, loading, gmailConnected, onOpenRule
   }), [data])
 
   const [collapsed, setCollapsed] = useState<Record<BoardColumnKey, boolean>>(() => {
-    const defaults = { reply: false, follow_up: false, sent: false, reengage: false }
+    const defaults = { draft: false, reply: false, follow_up: false, sent: false, reengage: false }
     try {
       const saved = localStorage.getItem('threads-board-collapsed')
       if (saved) return { ...defaults, ...JSON.parse(saved) }

@@ -67,6 +67,7 @@ export interface EmailThread {
   last_message_at: string | null
   last_sent_at: string | null
   last_received_at: string | null
+  last_draft_at: string | null
   closed_at: string | null
   created_at: string
   updated_at: string

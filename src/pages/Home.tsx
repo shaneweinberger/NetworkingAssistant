@@ -12,7 +12,7 @@ import styles from './Home.module.css'
 
 const GMAIL_SYNC_INTERVAL_MS = 30_000
 
-const EMPTY_BOARD: BoardData = { sent: [], follow_up: [], reply: [], reengage: [] }
+const EMPTY_BOARD: BoardData = { draft: [], sent: [], follow_up: [], reply: [], reengage: [] }
 
 export default function Home() {
   const [rules, setRules] = useState<ThreadRules>(DEFAULT_RULES)
