@@ -44,6 +44,7 @@ function formatMsgDate(internalDate: string): string {
   const now = new Date()
   const isThisYear = d.getFullYear() === now.getFullYear()
   return d.toLocaleDateString('en-US', {
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
     ...(!isThisYear ? { year: 'numeric' } : {}),

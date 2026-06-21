@@ -136,6 +136,20 @@ export async function loadBoardData(rules: ThreadRules, now: number = Date.now()
   return board
 }
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function startOfDay(ms: number): number {
+  const d = new Date(ms)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+function startOfWeek(ms: number): number {
+  const dayStart = startOfDay(ms)
+  return dayStart - new Date(dayStart).getDay() * DAY_MS
+}
+
 export function relativeTime(iso: string | null, now: number = Date.now()): string {
   if (!iso) return ''
   const then = new Date(iso).getTime()
@@ -147,7 +161,14 @@ export function relativeTime(iso: string | null, now: number = Date.now()): stri
   if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`
   const days = Math.floor(hours / 24)
   if (days === 1) return 'yesterday'
-  if (days < 7) return `${days} days ago`
+  if (days < 14) {
+    const thisWeekStart = startOfWeek(now)
+    const lastWeekStart = thisWeekStart - 7 * DAY_MS
+    const thenDayStart = startOfDay(then)
+    const weekday = WEEKDAY_NAMES[new Date(thenDayStart).getDay()]
+    if (thenDayStart >= thisWeekStart) return weekday
+    if (thenDayStart >= lastWeekStart) return `last ${weekday}`
+  }
   if (days < 30) {
     const weeks = Math.floor(days / 7)
     return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`

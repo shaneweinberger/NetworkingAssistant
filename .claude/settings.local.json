@@ -49,11 +49,19 @@
       "Bash(npx --no-install playwright --version)",
       "Read(//opt/homebrew/bin/**)",
       "Bash(open -a \"Google Chrome\" \"http://localhost:5173/contacts\")",
-      "Bash(screencapture -x /tmp/contacts_check.png)"
+      "Bash(screencapture -x /tmp/contacts_check.png)",
+      "Bash(chromium-cli --help)",
+      "Bash(cp /tmp/shot.mjs /Users/weinbergershane/Documents/Programming/NetworkingAssistant/shot.mjs)",
+      "Bash(node shot.mjs)",
+      "Bash(npm root *)",
+      "Bash(NODE_PATH=/Users/weinbergershane/.npm/_npx/e41f203b7505f1fb/node_modules node shot.mjs)",
+      "Bash(rm /tmp/test-rt.mjs)",
+      "Bash(git check-ignore *)"
     ],
     "additionalDirectories": [
       "/Users/weinbergershane/Documents/Programming/NetworkingAssistant/src/components",
-      "/Users/weinbergershane/Documents/Programming/NetworkingAssistant"
+      "/Users/weinbergershane/Documents/Programming/NetworkingAssistant",
+      "/private/tmp"
     ]
   }
 }

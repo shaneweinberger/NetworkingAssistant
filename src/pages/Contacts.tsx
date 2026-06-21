@@ -202,7 +202,11 @@ export default function Contacts() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const [threadsByContactId, setThreadsByContactId] = useState<Record<string, EmailThread>>({})
-  const [sendEmailFor, setSendEmailFor] = useState<{ contact: Contact; company: { name: string } } | null>(null)
+  const [sendEmailFor, setSendEmailFor] = useState<{
+    contact: Contact
+    company: { name: string }
+    replyToThread?: { threadId: string; gmailThreadId: string; subject: string | null } | null
+  } | null>(null)
 
   const [companyDrag, setCompanyDrag] = useState<{ from: number; dropIndex: number } | null>(null)
   const companyDragRef = useRef(companyDrag)
@@ -795,7 +799,16 @@ export default function Contacts() {
                         onFilterChange={handleFilterChange}
                         onUpdate={updateContact}
                         onDelete={setDeleteContactTarget}
-                        onSendEmail={(ct) => setSendEmailFor({ contact: ct, company: { name: companyNameByContactId[ct.id] ?? '' } })}
+                        onSendEmail={(ct) => {
+                          const thread = threadsByContactId[ct.id]
+                          setSendEmailFor({
+                            contact: ct,
+                            company: { name: companyNameByContactId[ct.id] ?? '' },
+                            replyToThread: thread
+                              ? { threadId: thread.id, gmailThreadId: thread.gmail_thread_id, subject: thread.subject }
+                              : null,
+                          })
+                        }}
                         threadsByContactId={threadsByContactId}
                         newContactId={newContactId}
                         companyByContactId={companyNameByContactId}
@@ -945,7 +958,16 @@ export default function Contacts() {
                       onUpdate={updateContact}
                       onDelete={setDeleteContactTarget}
                       onAdd={() => addContact(group.id)}
-                      onSendEmail={(c) => setSendEmailFor({ contact: c, company: { name: group.name } })}
+                      onSendEmail={(c) => {
+                        const thread = threadsByContactId[c.id]
+                        setSendEmailFor({
+                          contact: c,
+                          company: { name: group.name },
+                          replyToThread: thread
+                            ? { threadId: thread.id, gmailThreadId: thread.gmail_thread_id, subject: thread.subject }
+                            : null,
+                        })
+                      }}
                       threadsByContactId={threadsByContactId}
                       newContactId={newContactId}
                     />
@@ -1019,6 +1041,7 @@ export default function Contacts() {
         <SendEmailModal
           contact={sendEmailFor.contact}
           company={sendEmailFor.company}
+          replyToThread={sendEmailFor.replyToThread}
           onClose={() => setSendEmailFor(null)}
           onSent={async () => {
             const { data } = await supabase.from('email_threads').select('*')
@@ -1032,6 +1055,11 @@ export default function Contacts() {
                 contacts: group.contacts.map(ct => ct.id === refreshed ? (c as Contact) : ct),
               })))
             }
+          }}
+          onThreadClosed={async () => {
+            setSendEmailFor(null)
+            const { data } = await supabase.from('email_threads').select('*')
+            if (data) setThreadsByContactId(buildThreadMap(data as EmailThread[]))
           }}
         />
       )}
